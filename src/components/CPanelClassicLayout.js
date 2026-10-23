@@ -124,10 +124,14 @@ export default function CPanelClassicLayout({
     <div className="cpanel-classic-root">
       {/* cPanel Top Dark Blue Navbar */}
       <header className="cpanel-classic-header">
-        <div className="header-brand-wrap" onClick={() => setActiveTool(null)}>
-          <span className="brand-org">cPanel</span>
-          <span className="brand-pipe">|</span>
-          <span className="brand-product">Server Control Panel</span>
+        <div className="header-brand-wrap" onClick={() => setActiveTool(null)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src="/parakshtech-logo.jpg"
+            alt="Parakshtech Logo"
+            style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'contain' }}
+          />
+          <span className="brand-org" style={{ fontWeight: 800, letterSpacing: '-0.01em', color: '#ffffff' }}>Parakshtech</span>
+          <span className="brand-product" style={{ color: '#ff3333', fontWeight: 800 }}>cPanel</span>
         </div>
 
         {/* Search functions input */}
@@ -169,10 +173,10 @@ export default function CPanelClassicLayout({
           <div className="cpanel-tool-view-wrapper">
             <div className="cpanel-tool-topbar">
               <button className="btn-back-cpanel" onClick={() => setActiveTool(null)}>
-                ← Back to cPanel Dashboard
+                ← Back to Dashboard
               </button>
               <div className="tool-view-breadcrumb">
-                <span>cPanel</span>
+                <span>Parakshtech cPanel</span>
                 <span>/</span>
                 <span className="font-semibold text-white capitalize">{activeTool.replace('_', ' ')}</span>
               </div>

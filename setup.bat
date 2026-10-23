@@ -1,10 +1,10 @@
 @echo off
 REM ========================================================
-REM cPanel 1-Click Live Server Setup (Windows Server)
+REM Parakshtech cPanel 1-Click Live Server Setup (Windows Server)
 REM ========================================================
 
 echo ========================================================
-echo 🚀 Initializing cPanel Setup on Live Server...
+echo 🚀 Initializing Parakshtech cPanel Setup on Live Server...
 echo ========================================================
 
 WHERE node >nul 2>nul
@@ -14,11 +14,10 @@ IF %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-IF NOT EXIST "node_modules" (
-    echo 📦 Installing npm dependencies...
-    call npm install
+IF NOT EXIST "node_modules\mysql2" (
+    echo 📦 Installing project dependencies (npm install)...
+    call npm install --no-audit
 )
 
 node setup.js %*
 pause
-

@@ -1,21 +1,41 @@
 /**
- * cPanel Auto-Deployment & Live Server Setup Script
- * Sets up MySQL, Auto SSL, PM2, and builds frontend with zero hassle.
+ * Parakshtech cPanel Auto-Deployment & Live Server Setup Wizard
+ * Zero-configuration: auto-installs npm packages, prompts only for DB user & password,
+ * configures auto-SSL, initializes MySQL, and starts PM2 daemon.
  */
 
-const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
+const readline = require('readline');
 const { exec, execSync } = require('child_process');
-const mysql = require('mysql2/promise');
+const https = require('https');
 const crypto = require('crypto');
 
 console.log(`
 ========================================================================
-   🌐 cPanel Automated Live Server Deployment & Setup
+   🌐 Parakshtech cPanel - Live Server Automated Setup
 ========================================================================
 `);
+
+// 1. Ensure Dependencies Exist (Self-Bootstrapping)
+const mysqlModuleDir = path.resolve(__dirname, 'node_modules/mysql2');
+const selfsignedModuleDir = path.resolve(__dirname, 'node_modules/selfsigned');
+
+if (!fs.existsSync(mysqlModuleDir) || !fs.existsSync(selfsignedModuleDir)) {
+  console.log('📦 Fresh installation detected. Installing project dependencies (npm install)...');
+  console.log('   Please wait, this will take about 20-30 seconds...');
+  try {
+    execSync('npm install --no-audit', { stdio: 'inherit', cwd: __dirname });
+    console.log('✅ Dependencies installed successfully.\n');
+  } catch (depErr) {
+    console.error('❌ npm install failed:', depErr.message);
+    process.exit(1);
+  }
+}
+
+// Dynamically require packages after ensuring they are installed
+const mysql = require('mysql2/promise');
+const selfsigned = require('selfsigned');
 
 // Detect Server Public IP
 async function detectPublicIP() {
@@ -104,7 +124,7 @@ async function main() {
       dbPassword = passAns.trim();
     }
 
-    console.log(`\n🔍 Verifying MySQL Connection for user '${dbUser}'...`);
+    console.log(`\n🔍 Verifying MySQL Connection for user '${dbUser}' on localhost:3306...`);
 
     // 2. Test Connection & Create Database
     let rootConn;
@@ -117,11 +137,11 @@ async function main() {
       console.log('✅ Connected to MySQL Server successfully.');
     } catch (dbErr) {
       console.error(`\n❌ Failed to connect to MySQL: ${dbErr.message}`);
-      console.error('Please make sure MySQL is running on localhost:3306 and the password is correct.\n');
+      console.error('Please verify MySQL service is running on localhost:3306 and the password is correct.\n');
       process.exit(1);
     }
 
-    console.log('📦 Initializing cPanel database schema...');
+    console.log('📦 Initializing Parakshtech cPanel database schema...');
     await rootConn.query('CREATE DATABASE IF NOT EXISTS `cpanel` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;');
     await rootConn.end();
 
@@ -161,11 +181,10 @@ JWT_SECRET=${jwtSecret}
     const certPath = path.join(sslDir, 'cert.pem');
     const keyPath = path.join(sslDir, 'key.pem');
 
-    const selfsigned = require('selfsigned');
     const pems = await selfsigned.generate(
       [
-        { name: 'commonName', value: serverIP || 'cpanel-server' },
-        { name: 'organizationName', value: 'cPanel Server' }
+        { name: 'commonName', value: serverIP || 'parakshtech-cpanel' },
+        { name: 'organizationName', value: 'Parakshtech cPanel' }
       ],
       {
         days: 3650, // 10 years validity
@@ -191,7 +210,7 @@ JWT_SECRET=${jwtSecret}
     console.log('\n⚙️ Checking PM2 Process Supervisor...');
     try {
       execSync('pm2 -v', { stdio: 'ignore' });
-      console.log('✅ PM2 is installed.');
+      console.log('✅ PM2 is already installed.');
     } catch (e) {
       console.log('📦 Installing PM2 globally...');
       try {
@@ -212,12 +231,12 @@ JWT_SECRET=${jwtSecret}
     }
 
     // 8. Launch / Restart cPanel via PM2
-    console.log('\n🚀 Starting cPanel Service under PM2 Process Manager...');
+    console.log('\n🚀 Starting Parakshtech cPanel Service under PM2 Process Manager...');
     try {
       try { await runCmd('pm2 delete node-cpanel'); } catch (e) {}
       await runCmd('pm2 start server/server.js --name node-cpanel --time');
       try { await runCmd('pm2 save'); } catch (e) {}
-      console.log('✅ cPanel registered and running as background daemon: node-cpanel');
+      console.log('✅ Parakshtech cPanel registered and running as background daemon: node-cpanel');
     } catch (pm2StartErr) {
       console.warn('⚠️ PM2 start notice, starting via node fallback:', pm2StartErr.message);
     }
@@ -225,7 +244,7 @@ JWT_SECRET=${jwtSecret}
     // 9. Display Completion Banner
     console.log(`
 ========================================================================
-   🎉 CPANEL SETUP COMPLETED SUCCESSFULLY!
+   🎉 PARAKSHTECH CPANEL SETUP COMPLETED SUCCESSFULLY!
 ========================================================================
 
 Your autonomous Node.js cPanel is now LIVE and accessible:
@@ -255,4 +274,3 @@ Useful Server Commands:
 }
 
 main();
-

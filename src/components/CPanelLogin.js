@@ -41,13 +41,22 @@ export default function CPanelLogin({ onLoginSuccess }) {
   return (
     <div className="cpanel-login-wrapper">
       <div className="login-card-container">
-        {/* cPanel Branding Header */}
+        {/* Parakshtech cPanel Branding Header */}
         <div className="login-brand-header">
-          <div className="cpanel-official-logo">
-            <span className="logo-c">c</span>
-            <span className="logo-panel">Panel</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
+            <img
+              src="/parakshtech-logo.jpg"
+              alt="Parakshtech Logo"
+              style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'contain', boxShadow: '0 4px 12px rgba(255, 26, 26, 0.25)' }}
+            />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <span style={{ color: '#ffffff' }}>Parakshtech </span>
+                <span style={{ color: '#ff3333' }}>cPanel</span>
+              </div>
+              <span className="login-tagline" style={{ display: 'block', marginTop: '3px', fontSize: '0.85rem' }}>Autonomous Server & Cloud Control Panel</span>
+            </div>
           </div>
-          <span className="login-tagline">Web Hosting & Server Control Panel</span>
         </div>
 
         {/* Login Card */}
@@ -142,7 +151,7 @@ export default function CPanelLogin({ onLoginSuccess }) {
             <span>Português</span>
           </div>
           <p className="login-copyright">
-            Copyright © 2026 cPanel, L.L.C. All rights reserved. Autonomous Node.js Server Management.
+            Copyright © 2026 Parakshtech cPanel. All rights reserved. Autonomous Node.js Server Management.
           </p>
         </div>
       </div>
