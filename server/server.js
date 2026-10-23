@@ -22,6 +22,7 @@ const appInstallerRoutes = require('./routes/appInstallerRoutes');
 const storageRoutes = require('./routes/storageRoutes');
 const authRoutes = require('./routes/authRoutes');
 const dnsRoutes = require('./routes/dnsRoutes');
+const { startDnsServer } = require('./services/dnsServer');
 
 const app = express();
 const server = http.createServer(app);
@@ -107,6 +108,9 @@ if (httpsWss) {
 async function startServer() {
   try {
     const pool = await initDB();
+
+    // Start Authoritative DNS Nameserver on Port 53
+    startDnsServer(pool);
 
     // Register API endpoints
     app.use('/api/system', async (req, res) => {
