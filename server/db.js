@@ -115,6 +115,20 @@ async function initDB() {
         \`ip_address\` VARCHAR(50) DEFAULT '127.0.0.1',
         \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
+
+      CREATE TABLE IF NOT EXISTS \`dns_records\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`domain_id\` INT NULL,
+        \`domain_name\` VARCHAR(255) NOT NULL,
+        \`record_type\` VARCHAR(10) NOT NULL,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`ttl\` INT DEFAULT 14400,
+        \`value\` TEXT NOT NULL,
+        \`priority\` INT NULL,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (\`domain_name\`),
+        INDEX (\`record_type\`)
+      ) ENGINE=InnoDB;
     `);
 
     // Ensure default panel users exist (Admin & Developer User)

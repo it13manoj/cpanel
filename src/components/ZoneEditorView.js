@@ -230,16 +230,47 @@ export default function ZoneEditorView({ domains, initialDomain }) {
           <p className="text-sm text-muted mb-3">
             To manage this domain completely through this cPanel, point your domain registrar (GoDaddy, Namecheap, Hostinger, etc.) to these nameservers:
           </p>
-          <div className="dashboard-cols">
+          <div className="dashboard-cols mb-3">
             <div className="p-3 bg-slate-100 rounded border border-slate-200">
               <span className="text-xs text-muted block font-semibold">Primary Nameserver (NS1)</span>
               <code className="text-base text-primary font-bold block mt-1">ns1.{selectedDomain}</code>
-              <span className="text-xs text-dim block mt-1">Resolves to IP: <strong>{dnsData?.serverIp || '127.0.0.1'}</strong></span>
+              <span className="text-xs text-dim block mt-1">Resolves to IP: <strong>{dnsData?.serverIp || '173.212.235.87'}</strong></span>
             </div>
             <div className="p-3 bg-slate-100 rounded border border-slate-200">
               <span className="text-xs text-muted block font-semibold">Secondary Nameserver (NS2)</span>
               <code className="text-base text-primary font-bold block mt-1">ns2.{selectedDomain}</code>
-              <span className="text-xs text-dim block mt-1">Resolves to IP: <strong>{dnsData?.serverIp || '127.0.0.1'}</strong></span>
+              <span className="text-xs text-dim block mt-1">Resolves to IP: <strong>{dnsData?.serverIp || '173.212.235.87'}</strong></span>
+            </div>
+          </div>
+
+          {/* GoDaddy / Registrar Setup Guidance */}
+          <div className="p-3 rounded border border-amber-300 bg-amber-50 text-amber-900 text-xs mt-3">
+            <div className="font-bold mb-1 flex items-center gap-1 text-sm text-amber-950">
+              <span>⚠️ Important for GoDaddy / Namecheap:</span>
+            </div>
+            <p className="mb-2">
+              If GoDaddy shows <em>"You have not set these up yet"</em>, choose either of these methods:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+              <div className="bg-white p-2.5 rounded border border-amber-200">
+                <span className="font-bold text-slate-800 block mb-1">⚡ Method A: Instant Direct Pointing (Recommended)</span>
+                <span className="text-slate-600 leading-relaxed block">
+                  Keep GoDaddy default nameservers, and add an <strong>A Record</strong> in GoDaddy DNS:
+                  <br />• <strong>Type</strong>: <code>A</code>
+                  <br />• <strong>Name / Host</strong>: <code>@</code>
+                  <br />• <strong>Value / Points to</strong>: <code>{dnsData?.serverIp || '173.212.235.87'}</code>
+                  <br />• <strong>TTL</strong>: <code>1/2 Hour</code>
+                </span>
+              </div>
+              <div className="bg-white p-2.5 rounded border border-amber-200">
+                <span className="font-bold text-slate-800 block mb-1">🔧 Method B: Custom Nameservers with Host Names</span>
+                <span className="text-slate-600 leading-relaxed block">
+                  In GoDaddy &rarr; Domain Settings &rarr; <strong>Host Names</strong> (Glue Records):
+                  <br />• Add Host: <code>ns1</code> &rarr; IP: <code>{dnsData?.serverIp || '173.212.235.87'}</code>
+                  <br />• Add Host: <code>ns2</code> &rarr; IP: <code>{dnsData?.serverIp || '173.212.235.87'}</code>
+                  <br />Then save the nameservers!
+                </span>
+              </div>
             </div>
           </div>
         </div>
