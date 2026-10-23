@@ -42,8 +42,27 @@ module.exports = (pool) => {
       // Automatically create the doc_root folder if it doesn't exist
       if (!fs.existsSync(doc_root)) {
         fs.mkdirSync(doc_root, { recursive: true });
-        
-        // Create a starter index.html
+      }
+
+      // Ensure domain.config.json is always created in doc_root and vhosts folder
+      const vhostDir = path.resolve(__dirname, '../../hosting_data/vhosts');
+      if (!fs.existsSync(vhostDir)) fs.mkdirSync(vhostDir, { recursive: true });
+
+      const domainConfig = {
+        domain_name,
+        doc_root,
+        proxy_type,
+        proxy_port: proxy_port || null,
+        created_at: new Date().toISOString(),
+        status: 'active'
+      };
+
+      fs.writeFileSync(path.join(doc_root, 'domain.config.json'), JSON.stringify(domainConfig, null, 2), 'utf8');
+      fs.writeFileSync(path.join(vhostDir, `${domain_name}.json`), JSON.stringify(domainConfig, null, 2), 'utf8');
+
+      // Create a starter index.html if missing
+      const indexPath = path.join(doc_root, 'index.html');
+      if (!fs.existsSync(indexPath)) {
         const starterHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,14 +80,14 @@ module.exports = (pool) => {
 </head>
 <body>
   <div class="card">
-    <span class="badge">Allocated via Node cPanel</span>
+    <span class="badge">Allocated via Parakshtech cPanel</span>
     <h1>Domain Active: ${domain_name}</h1>
     <p>Your web directory has been successfully provisioned. Upload your site files or link your Node.js application using the cPanel File Manager.</p>
     <div class="footer">Document Root: <code>${doc_root}</code></div>
   </div>
 </body>
 </html>`;
-        fs.writeFileSync(path.join(doc_root, 'index.html'), starterHtml, 'utf8');
+        fs.writeFileSync(indexPath, starterHtml, 'utf8');
       }
 
       // Insert into MySQL

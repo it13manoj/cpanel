@@ -62,15 +62,29 @@ app.use(async (req, res, next) => {
     return next();
   }
 
+  const cleanHost = host.replace(/^www\./, '');
+
   const pool = getPool();
   if (pool) {
     try {
-      const [rows] = await pool.query('SELECT * FROM domains WHERE domain_name = ? AND status = "active"', [host]);
+      const [rows] = await pool.query(
+        'SELECT * FROM `cpanel`.`domains` WHERE (domain_name = ? OR domain_name = ? OR domain_name = ?) AND status = "active"',
+        [host, cleanHost, `www.${cleanHost}`]
+      );
       if (rows.length > 0) {
         const domain = rows[0];
         if (domain.proxy_type === 'proxy' && domain.proxy_port) {
           return res.redirect(`http://localhost:${domain.proxy_port}${req.url}`);
         } else {
+          const targetPath = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+          const filePath = path.join(domain.doc_root, targetPath);
+          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            return res.sendFile(filePath);
+          }
+          const defaultIndex = path.join(domain.doc_root, 'index.html');
+          if (fs.existsSync(defaultIndex)) {
+            return res.sendFile(defaultIndex);
+          }
           return express.static(domain.doc_root)(req, res, next);
         }
       }
@@ -78,6 +92,26 @@ app.use(async (req, res, next) => {
       console.error('VHost lookup error:', e);
     }
   }
+
+  // Disk VHost Fallback (domain.config.json)
+  try {
+    const configPath = path.resolve(__dirname, `../hosting_data/vhosts/${cleanHost}.json`);
+    if (fs.existsSync(configPath)) {
+      const vhostConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (vhostConfig.doc_root && fs.existsSync(vhostConfig.doc_root)) {
+        const targetPath = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+        const filePath = path.join(vhostConfig.doc_root, targetPath);
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          return res.sendFile(filePath);
+        }
+        const defaultIndex = path.join(vhostConfig.doc_root, 'index.html');
+        if (fs.existsSync(defaultIndex)) {
+          return res.sendFile(defaultIndex);
+        }
+      }
+    }
+  } catch (e) {}
+
   next();
 });
 
