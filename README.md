@@ -63,7 +63,7 @@ During setup, you are prompted **only** for:
 3. **Auto-SSL Certificate Generation**:
    - Detects your server's **Public IP address** (via external IP service or local interface).
    - Generates a 2048-bit RSA Private Key (`server/ssl/key.pem`) and X.509 Certificate (`server/ssl/cert.pem`) with Subject Alternative Names (SANs) for your server IP and `localhost`, valid for 10 years.
-   - Configures Express to serve both **HTTP** (port 5000) and **HTTPS** (port 5443) concurrently.
+   - Configures Express to serve both **HTTP** (port 5200) and **HTTPS** (port 5443) concurrently.
 4. **PM2 Process Supervisor Setup**:
    - Detects and installs PM2 globally (`npm install -g pm2`) if missing.
    - Registers and launches the cPanel backend as a persistent background daemon: `node-cpanel`.
@@ -79,9 +79,9 @@ Once the setup completes, your panel will be live immediately:
 
 | Interface | URL | Description |
 | :--- | :--- | :--- |
-| **Public HTTP** | `http://<YOUR_SERVER_IP>:5000` | Standard web panel access |
+| **Public HTTP** | `http://<YOUR_SERVER_IP>:5200` | Standard web panel access |
 | **Secure HTTPS** | `https://<YOUR_SERVER_IP>:5443` | Encrypted SSL panel access |
-| **Localhost** | `http://localhost:5000` | Local server browser access |
+| **Localhost** | `http://localhost:5200` | Local server browser access |
 
 ### Default Super Admin Credentials:
 - **Username**: `admin`
@@ -97,7 +97,7 @@ If your server has a firewall enabled (`ufw` on Ubuntu or Security Groups on AWS
 
 ```bash
 # Ubuntu UFW
-sudo ufw allow 5000/tcp comment "cPanel HTTP"
+sudo ufw allow 5200/tcp comment "cPanel HTTP"
 sudo ufw allow 5443/tcp comment "cPanel HTTPS"
 sudo ufw allow 80/tcp   comment "Hosted Domains HTTP"
 sudo ufw allow 443/tcp  comment "Hosted Domains HTTPS"

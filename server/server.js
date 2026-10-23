@@ -27,7 +27,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5200;
 const HTTPS_PORT = process.env.HTTPS_PORT || 5443;
 
 // Optional HTTPS Server with auto-loaded SSL certificates

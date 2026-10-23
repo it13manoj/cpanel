@@ -158,7 +158,7 @@ async function main() {
     // 3. Write / Update .env file
     const envPath = path.resolve(__dirname, '.env');
     const jwtSecret = crypto.randomBytes(32).toString('hex');
-    const envContent = `PORT=5000
+    const envContent = `PORT=5200
 HTTPS_PORT=5443
 DB_HOST=localhost
 DB_USER=${dbUser}
@@ -244,7 +244,7 @@ JWT_SECRET=${jwtSecret}
     console.log('\n🚀 Starting Parakshtech cPanel Service under PM2 Process Manager...');
     try {
       try { await runCmd('pm2 delete node-cpanel'); } catch (e) {}
-      freePort(5000);
+      freePort(5200);
       freePort(5443);
       await runCmd('pm2 start server/server.js --name node-cpanel --time');
       try { await runCmd('pm2 save'); } catch (e) {}
@@ -261,9 +261,9 @@ JWT_SECRET=${jwtSecret}
 
 Your autonomous Node.js cPanel is now LIVE and accessible:
 
-  🌐 Public HTTP Panel:    http://${serverIP}:5000
+  🌐 Public HTTP Panel:    http://${serverIP}:5200
   🔒 Secure HTTPS Panel:   https://${serverIP}:5443
-  💻 Localhost Panel:      http://localhost:5000
+  💻 Localhost Panel:      http://localhost:5200
 
 ------------------------------------------------------------------------
 🔑 Super Admin Login Credentials:
