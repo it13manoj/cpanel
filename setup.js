@@ -78,6 +78,16 @@ function getLocalIP() {
   return '127.0.0.1';
 }
 
+function freePort(port) {
+  try {
+    if (process.platform === 'win32') {
+      execSync(`for /f "tokens=5" %a in ('netstat -aon ^| findstr :${port}') do taskkill /F /PID %a`, { stdio: 'ignore' });
+    } else {
+      execSync(`fuser -k ${port}/tcp 2>/dev/null || true`, { stdio: 'ignore' });
+    }
+  } catch (e) {}
+}
+
 // Ask question helper
 function askQuestion(query) {
   const rl = readline.createInterface({
@@ -234,6 +244,8 @@ JWT_SECRET=${jwtSecret}
     console.log('\n🚀 Starting Parakshtech cPanel Service under PM2 Process Manager...');
     try {
       try { await runCmd('pm2 delete node-cpanel'); } catch (e) {}
+      freePort(5000);
+      freePort(5443);
       await runCmd('pm2 start server/server.js --name node-cpanel --time');
       try { await runCmd('pm2 save'); } catch (e) {}
       console.log('✅ Parakshtech cPanel registered and running as background daemon: node-cpanel');
