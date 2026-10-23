@@ -11,11 +11,16 @@ When deploying to your live server (Ubuntu, Debian, CentOS, RHEL, or Windows Ser
 ### 🐧 On Linux Server (Ubuntu / Debian / CentOS / EC2 / DigitalOcean)
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/cpanel.git
+# 1. Allow cPanel Ports in UFW Firewall (Important!)
+sudo ufw allow 5200/tcp comment "Parakshtech cPanel HTTP"
+sudo ufw allow 5443/tcp comment "Parakshtech cPanel HTTPS"
+sudo ufw reload
+
+# 2. Clone the repository
+git clone https://github.com/it13manoj/cpanel.git
 cd cpanel
 
-# 2. Run the automated setup
+# 3. Run the automated setup
 npm run setup
 ```
 
@@ -91,14 +96,20 @@ Once the setup completes, your panel will be live immediately:
 
 ---
 
-## 🛡️ Firewall / Port Configuration (If applicable)
+## 🛡️ Firewall / Port Configuration (UFW)
 
-If your server has a firewall enabled (`ufw` on Ubuntu or Security Groups on AWS/DigitalOcean), make sure to open the following ports:
+If your server has a firewall enabled (`ufw` on Ubuntu or Security Groups on AWS/DigitalOcean), open both panel ports with this 1-line command:
 
 ```bash
-# Ubuntu UFW
-sudo ufw allow 5200/tcp comment "cPanel HTTP"
-sudo ufw allow 5443/tcp comment "cPanel HTTPS"
+# ⚡ 1-Line command to allow both cPanel ports
+sudo ufw allow 5200/tcp && sudo ufw allow 5443/tcp && sudo ufw reload
+```
+
+Or configure all hosting ports (cPanel, Hosted Domains, SSL, & MySQL):
+
+```bash
+sudo ufw allow 5200/tcp comment "Parakshtech cPanel HTTP"
+sudo ufw allow 5443/tcp comment "Parakshtech cPanel HTTPS"
 sudo ufw allow 80/tcp   comment "Hosted Domains HTTP"
 sudo ufw allow 443/tcp  comment "Hosted Domains HTTPS"
 sudo ufw allow 3306/tcp comment "MySQL"
