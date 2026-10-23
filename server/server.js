@@ -168,6 +168,35 @@ async function startServer() {
         console.log(`📡 Secure WSS Metrics live on wss://0.0.0.0:${HTTPS_PORT}`);
       });
     }
+
+    // Also bind standard web ports 80 & 443 for hosted websites & domains
+    if (PORT !== 80) {
+      try {
+        const webServerHttp = http.createServer(app);
+        webServerHttp.listen(80, '0.0.0.0', () => {
+          console.log(`🌐 Public Domains Web Server (Port 80) is LIVE on http://0.0.0.0:80`);
+        });
+        webServerHttp.on('error', (err) => {
+          console.warn(`ℹ️ Port 80 web listener notice: ${err.message}`);
+        });
+      } catch (e) {}
+    }
+
+    if (HTTPS_PORT !== 443 && fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
+      try {
+        const sslOptions = {
+          cert: fs.readFileSync(sslCertPath),
+          key: fs.readFileSync(sslKeyPath)
+        };
+        const webServerHttps = https.createServer(sslOptions, app);
+        webServerHttps.listen(443, '0.0.0.0', () => {
+          console.log(`🔒 Public Domains HTTPS Server (Port 443) is LIVE on https://0.0.0.0:443`);
+        });
+        webServerHttps.on('error', (err) => {
+          console.warn(`ℹ️ Port 443 web listener notice: ${err.message}`);
+        });
+      } catch (e) {}
+    }
   } catch (error) {
     console.error('Fatal startup error:', error);
     process.exit(1);
