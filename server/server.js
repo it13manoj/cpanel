@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
 require('dotenv').config();
@@ -26,6 +28,27 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 5000;
+const HTTPS_PORT = process.env.HTTPS_PORT || 5443;
+
+// Optional HTTPS Server with auto-loaded SSL certificates
+let httpsServer = null;
+let httpsWss = null;
+const sslCertPath = path.resolve(__dirname, 'ssl/cert.pem');
+const sslKeyPath = path.resolve(__dirname, 'ssl/key.pem');
+
+if (fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
+  try {
+    const sslOptions = {
+      cert: fs.readFileSync(sslCertPath),
+      key: fs.readFileSync(sslKeyPath)
+    };
+    httpsServer = https.createServer(sslOptions, app);
+    httpsWss = new WebSocket.Server({ server: httpsServer });
+    console.log('🔒 SSL Certificates loaded for HTTPS listener.');
+  } catch (sslErr) {
+    console.warn('⚠️ Could not load SSL certificates:', sslErr.message);
+  }
+}
 
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
@@ -57,21 +80,29 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// WebSocket Server for live System Stats
-wss.on('connection', (ws) => {
-  const interval = setInterval(async () => {
-    if (ws.readyState === WebSocket.OPEN) {
-      try {
-        const metrics = await getSystemMetrics(getPool());
-        ws.send(JSON.stringify({ type: 'METRICS_UPDATE', data: metrics }));
-      } catch (err) {}
-    }
-  }, 2000);
+// WebSocket Metrics Broadcaster
+function setupMetricsWs(serverWss) {
+  if (!serverWss) return;
+  serverWss.on('connection', (ws) => {
+    const interval = setInterval(async () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          const metrics = await getSystemMetrics(getPool());
+          ws.send(JSON.stringify({ type: 'METRICS_UPDATE', data: metrics }));
+        } catch (err) {}
+      }
+    }, 2000);
 
-  ws.on('close', () => {
-    clearInterval(interval);
+    ws.on('close', () => {
+      clearInterval(interval);
+    });
   });
-});
+}
+
+setupMetricsWs(wss);
+if (httpsWss) {
+  setupMetricsWs(httpsWss);
+}
 
 async function startServer() {
   try {
@@ -103,7 +134,7 @@ async function startServer() {
     // Fallback handler
     app.use((req, res) => {
       const indexPath = path.join(buildPath, 'index.html');
-      if (require('fs').existsSync(indexPath)) {
+      if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
         res.json({
@@ -123,13 +154,20 @@ async function startServer() {
       }
     });
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`====================================================`);
-      console.log(`🚀 Node.js cPanel Server is LIVE on http://localhost:${PORT}`);
-      console.log(`📡 WebSocket Metrics live on ws://localhost:${PORT}`);
+      console.log(`🚀 Node.js cPanel Server is LIVE on http://0.0.0.0:${PORT}`);
+      console.log(`📡 WebSocket Metrics live on ws://0.0.0.0:${PORT}`);
       console.log(`🗄️ Connected to MySQL database: ${dbConfig.database} as ${dbConfig.user}`);
       console.log(`====================================================`);
     });
+
+    if (httpsServer) {
+      httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+        console.log(`🔒 Secure HTTPS cPanel is LIVE on https://0.0.0.0:${HTTPS_PORT}`);
+        console.log(`📡 Secure WSS Metrics live on wss://0.0.0.0:${HTTPS_PORT}`);
+      });
+    }
   } catch (error) {
     console.error('Fatal startup error:', error);
     process.exit(1);
