@@ -118,10 +118,10 @@ export default function CPanelClassicLayout({
       id: 'applications',
       title: 'APPLICATIONS',
       items: [
-        { id: 'installer', name: '1-Click App Installer', desc: 'Deploy WordPress, APIs, React Apps', icon: Rocket, color: 'bg-blue' },
+        { id: 'installer', name: '1-Click App Installer', desc: 'WordPress, WooCommerce, Laravel & 36+ Apps', icon: Rocket, color: 'bg-blue' },
         { id: 'apps', name: 'Node.js App Manager', desc: 'Deploy & monitor background processes', icon: Cpu, color: 'bg-green' },
-        { id: 'installer', name: 'WordPress / Node API', desc: '1-Click Fullstack scaffold', icon: FileCode, color: 'bg-indigo' },
-        { id: 'installer', name: 'All Applications', desc: 'Catalog of 5 production templates', icon: Archive, color: 'bg-amber' }
+        { id: 'installer', name: 'WordPress & CMS', desc: 'WordPress, Joomla, Drupal, Ghost, PrestaShop', icon: FileCode, color: 'bg-indigo' },
+        { id: 'installer', name: 'App Catalog (36 Apps)', desc: 'CMS, E-Commerce, Forums, Frameworks & DevOps', icon: Archive, color: 'bg-amber' }
       ]
     },
     {

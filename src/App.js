@@ -121,7 +121,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardView metrics={metrics} setActiveTab={setActiveTool} logs={logs} />;
       case 'installer':
-        return <AppInstallerSection setActiveTab={setActiveTool} reloadDomains={reloadDomains} />;
+        return <AppInstallerSection setActiveTab={setActiveTool} reloadDomains={reloadDomains} domains={domains} />;
       case 'domains':
         return (
           <DomainsView
