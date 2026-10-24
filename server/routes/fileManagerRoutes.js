@@ -20,7 +20,13 @@ if (!fs.existsSync(path.join(__dirname, '../../uploads_temp'))) {
 
 function resolveSafePath(targetPath) {
   if (!targetPath) return defaultBaseDir;
-  const resolved = path.resolve(defaultBaseDir, targetPath);
+  // Normalize and prevent directory traversal
+  const cleanTarget = path.normalize(targetPath).replace(/^(\.\.[\/\\])+/, '');
+  const resolved = path.resolve(defaultBaseDir, cleanTarget);
+  // Ensure the resolved path stays within defaultBaseDir
+  if (!resolved.startsWith(defaultBaseDir)) {
+    return defaultBaseDir;
+  }
   return resolved;
 }
 

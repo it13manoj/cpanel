@@ -1,8 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
+
+// SHA-256 password hash generator with salt
+function hashPassword(password, salt) {
+  return crypto.pbkdf2Sync(password, salt || 'cpanel_salt_secure_2026', 1000, 64, 'sha512').toString('hex');
+}
 
 module.exports = (pool) => {
-  // Login
+  // Login with dual compatibility (supports plain & hashed)
   router.post('/login', async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -10,9 +16,13 @@ module.exports = (pool) => {
         return res.status(400).json({ success: false, error: 'Username and password are required' });
       }
 
+      const cleanUser = username.trim();
+      const cleanPass = password.trim();
+      const hashedPass = hashPassword(cleanPass);
+
       const [rows] = await pool.query(
-        'SELECT id, username, role, allocated_domain, disk_quota_mb, status FROM panel_users WHERE username = ? AND password = ?',
-        [username.trim(), password.trim()]
+        'SELECT id, username, password, role, allocated_domain, disk_quota_mb, status FROM panel_users WHERE username = ?',
+        [cleanUser]
       );
 
       if (rows.length === 0) {
@@ -20,9 +30,24 @@ module.exports = (pool) => {
       }
 
       const user = rows[0];
+      const match = (user.password === cleanPass || user.password === hashedPass);
+      if (!match) {
+        return res.status(401).json({ success: false, error: 'Invalid username or password' });
+      }
+
       if (user.status !== 'active') {
         return res.status(403).json({ success: false, error: 'Account is deactivated' });
       }
+
+      // Upgrade plain password to hash automatically on successful login
+      if (user.password === cleanPass) {
+        try {
+          await pool.query('UPDATE panel_users SET password = ? WHERE id = ?', [hashedPass, user.id]);
+        } catch (e) {}
+      }
+
+      // Generate secure session token
+      const sessionToken = crypto.randomBytes(32).toString('hex');
 
       // Log login
       await pool.query(
@@ -30,10 +55,12 @@ module.exports = (pool) => {
         ['AUTH', `User logged in: ${user.username}`, `Role: ${user.role}`]
       );
 
+      const { password: _, ...safeUser } = user;
       res.json({
         success: true,
         message: 'Login successful',
-        user
+        user: safeUser,
+        token: sessionToken
       });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -65,9 +92,10 @@ module.exports = (pool) => {
         return res.status(400).json({ success: false, error: `User '${cleanUser}' already exists` });
       }
 
+      const hashedPassword = hashPassword(password.trim());
       const [result] = await pool.query(
         'INSERT INTO panel_users (username, password, role, allocated_domain, disk_quota_mb, status) VALUES (?, ?, ?, ?, ?, "active")',
-        [cleanUser, password, role, allocated_domain || null, disk_quota_mb]
+        [cleanUser, hashedPassword, role, allocated_domain || null, disk_quota_mb]
       );
 
       await pool.query(
@@ -126,11 +154,13 @@ module.exports = (pool) => {
         return res.status(404).json({ success: false, error: 'User not found' });
       }
 
-      if (current_password && user[0].password !== current_password.trim()) {
+      const isCurrentCorrect = (user[0].password === current_password.trim() || user[0].password === hashPassword(current_password.trim()));
+      if (current_password && !isCurrentCorrect) {
         return res.status(401).json({ success: false, error: 'Current password is incorrect' });
       }
 
-      await pool.query('UPDATE panel_users SET password = ? WHERE id = ?', [new_password.trim(), user[0].id]);
+      const hashedNew = hashPassword(new_password.trim());
+      await pool.query('UPDATE panel_users SET password = ? WHERE id = ?', [hashedNew, user[0].id]);
 
       await pool.query(
         'INSERT INTO activity_logs (module, action, details) VALUES (?, ?, ?)',

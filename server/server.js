@@ -75,6 +75,43 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Security HTTP Headers & Information Hiding
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// In-Memory Login Rate Limiter (Protection against Brute Force)
+const loginAttempts = new Map();
+app.use('/api/auth/login', (req, res, next) => {
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowMs = 5 * 60 * 1000; // 5 minutes
+  const maxAttempts = 10; // max 10 failed attempts
+
+  let record = loginAttempts.get(clientIp);
+  if (!record || now - record.startTime > windowMs) {
+    record = { count: 1, startTime: now };
+    loginAttempts.set(clientIp, record);
+  } else {
+    record.count++;
+  }
+
+  if (record.count > maxAttempts) {
+    const remainingSec = Math.ceil((record.startTime + windowMs - now) / 1000);
+    return res.status(429).json({
+      success: false,
+      error: `Too many login attempts from this IP. Please wait ${remainingSec}s before retrying.`
+    });
+  }
+
+  next();
+});
+
 // Domain Virtual Host Router / Static Host Handler
 app.use(async (req, res, next) => {
   // Never intercept cPanel API routes or static build assets

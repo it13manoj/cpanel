@@ -4,11 +4,31 @@ const { exec } = require('child_process');
 const path = require('path');
 
 module.exports = (pool) => {
+  // Dangerous system destructive command blocklist
+  const BLOCKED_COMMANDS = [
+    /\brm\s+-rf\s+\/\s*$/i,
+    /\brm\s+-rf\s+\/\*/i,
+    /\bmkfs\b/i,
+    /\bdd\s+if=.*of=\/dev\/[s|v]da/i,
+    /:(){ :|:& };:/, // fork bomb
+    /\bchmod\s+-R\s+777\s+\/\s*$/i
+  ];
+
   // Execute a server command
   router.post('/exec', (req, res) => {
     const { command, cwd } = req.body;
     if (!command || !command.trim()) {
       return res.status(400).json({ success: false, error: 'Command is required' });
+    }
+
+    const trimmedCmd = command.trim();
+    for (const pattern of BLOCKED_COMMANDS) {
+      if (pattern.test(trimmedCmd)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Security Alert: This destructive command pattern has been blocked by cPanel Security Shield.'
+        });
+      }
     }
 
     const workingDir = cwd ? path.resolve(cwd) : path.resolve(__dirname, '../../');
