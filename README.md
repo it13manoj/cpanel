@@ -1,26 +1,64 @@
-# 🌐 Autonomous Node.js cPanel & Server Control Panel
+# 🌐 Parakshtech cPanel — Autonomous Server & Web Hosting Control Panel
 
-A production-grade, self-hosted web hosting and server control panel built with **Node.js, Express, MySQL, and React**. Replicates the official cPanel Paper Lantern interface with complete server management capabilities: Domain allocation, automated SSL generation, MySQL management, FTP permissions, 1-Click App Installer, Terminal, Quota management, and PM2 Node.js Process Manager.
+A production-grade, self-hosted web hosting and server control panel built with **Node.js, Express, MySQL, Nginx, and React**. Replicates the official cPanel Paper Lantern interface with complete server management capabilities: Domain allocation, automated Nginx virtual hosts, automated Let's Encrypt SSL, DNS Zone Editor with authoritative nameservers (RFC-compliant Port 53), MySQL management, FTP permissions, 1-Click App Installer, Terminal, Quota management, and PM2 Process Supervisor.
 
 ---
 
-## ⚡ 1-Click Live Server Setup (Via CMD / Terminal)
+## 🏗️ Architecture & Isolation
 
-When deploying to your live server (Ubuntu, Debian, CentOS, RHEL, or Windows Server), you only need to run a single command. The installer will prompt you **only** for your MySQL Username and Password, and handle everything else automatically.
+Parakshtech cPanel is engineered to run in complete isolation so it **never conflicts with existing live websites or services**:
 
-### 🐧 On Linux Server (Ubuntu / Debian / CentOS / EC2 / DigitalOcean)
+| Service | Port(s) | Description |
+| :--- | :--- | :--- |
+| **Parakshtech cPanel (HTTP)** | `5200` | Isolated admin management dashboard |
+| **Parakshtech cPanel (HTTPS)** | `5443` | Encrypted SSL admin management dashboard |
+| **Nginx Web Server** | `80` & `443` | Handles all public web traffic, live sites, and hosted domains |
+| **Authoritative DNS** | `53` (UDP/TCP) | Handles domain nameserver queries (`ns1` & `ns2`) |
+| **MySQL Database** | `3306` | MySQL 8.0 database engine |
+
+> [!IMPORTANT]
+> **Zero Downtime Guarantee:** The cPanel server strictly binds to port `5200` and `5443`. It will **never** touch, hijack, or interrupt existing websites running on Nginx, Apache, Port 80, or Port 443 (e.g. `parakshtech.com`).
+
+---
+
+## 📋 System Prerequisites
+
+Before running the installer, ensure your VPS (Ubuntu 20.04 / 22.04 / 24.04, Debian, CentOS, or AlmaLinux) has the standard hosting packages installed:
 
 ```bash
-# 1. Allow cPanel Ports in UFW Firewall (Important!)
-sudo ufw allow 5200/tcp comment "Parakshtech cPanel HTTP"
-sudo ufw allow 5443/tcp comment "Parakshtech cPanel HTTPS"
+# Ubuntu / Debian 1-line prerequisite setup
+sudo apt update -y && sudo apt install -y curl git nginx mysql-server certbot python3-certbot-nginx
+
+# Install Node.js (v20 LTS) & PM2
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+sudo npm install -g pm2
+```
+
+---
+
+## ⚡ 1-Click Installation & Deployment
+
+Deploying Parakshtech cPanel to a live Linux server takes under 2 minutes:
+
+```bash
+# 1. Open required ports in the firewall
+sudo ufw allow 5200/tcp comment "cPanel HTTP"
+sudo ufw allow 5443/tcp comment "cPanel HTTPS"
+sudo ufw allow 80/tcp   comment "Public Web HTTP"
+sudo ufw allow 443/tcp  comment "Public Web HTTPS"
+sudo ufw allow 53/tcp   comment "DNS TCP"
+sudo ufw allow 53/udp   comment "DNS UDP"
 sudo ufw reload
 
-# 2. Clone the repository
-git clone https://github.com/it13manoj/cpanel.git
+# 2. Clone the repository into /var/www/html/cpanel
+sudo mkdir -p /var/www/html
+cd /var/www/html
+sudo git clone https://github.com/it13manoj/cpanel.git
 cd cpanel
+sudo chown -R $USER:$USER /var/www/html/cpanel
 
-# 3. Run the automated setup
+# 3. Run the automated setup wizard
 npm run setup
 ```
 
@@ -28,28 +66,14 @@ npm run setup
 
 ---
 
-### 🪟 On Windows Server
+## 💬 What the Setup Wizard Asks You
 
-Open Command Prompt (`cmd.exe`) or PowerShell as Administrator:
-
-```cmd
-git clone https://github.com/YOUR_USERNAME/cpanel.git
-cd cpanel
-npm run setup
-```
-
-*(Alternatively, double-click or run `setup.bat`)*
-
----
-
-## 💬 What the Setup Asks You
-
-During setup, you are prompted **only** for:
+The interactive setup wizard asks **only** for your MySQL credentials:
 1. `👉 Enter MySQL Database Username [root]:` *(Press Enter for default `root`)*
 2. `👉 Enter MySQL Database Password:` *(Enter your MySQL root password)*
 
-> 💡 **Non-Interactive / Unattended Setup**:  
-> You can also pass credentials directly via flags or environment variables:
+> 💡 **Non-Interactive / Unattended Setup:**  
+> You can also run the setup completely unattended via flags:
 > ```bash
 > node setup.js --user=root --password=your_secure_password
 > ```
@@ -58,86 +82,140 @@ During setup, you are prompted **only** for:
 
 ## 🚀 What the Automated Setup Does For You
 
-1. **MySQL Configuration**:
-   - Tests connectivity to your local MySQL instance.
+1. **MySQL Initialization:**
+   - Tests local database connectivity.
    - Automatically creates the `cpanel` database.
-   - Initializes all 9 required tables (`domains`, `managed_databases`, `ftp_users`, `panel_users`, `installed_packages`, `managed_apps`, `cron_jobs`, `activity_logs`, `dns_records`).
+   - Auto-creates all 9 schemas: `domains`, `dns_records`, `managed_databases`, `ftp_users`, `panel_users`, `installed_packages`, `managed_apps`, `cron_jobs`, and `activity_logs`.
    - Provisions default Superadmin credentials (`admin` / `admin123`).
-2. **Environment File Generation**:
-   - Generates production `.env` with auto-generated secure JWT secret, ports, and database credentials.
-3. **Auto-SSL Certificate Generation**:
-   - Detects your server's **Public IP address** (via external IP service or local interface).
-   - Generates a 2048-bit RSA Private Key (`server/ssl/key.pem`) and X.509 Certificate (`server/ssl/cert.pem`) with Subject Alternative Names (SANs) for your server IP and `localhost`, valid for 10 years.
-   - Configures Express to serve both **HTTP** (port 5200) and **HTTPS** (port 5443) concurrently.
-4. **PM2 Process Supervisor Setup**:
-   - Detects and installs PM2 globally (`npm install -g pm2`) if missing.
+2. **Environment File Generation (`.env`):**
+   - Generates production `.env` with a secure randomized JWT secret, database credentials, and port configurations.
+3. **Public Server IP Auto-Detection:**
+   - Detects your VPS public IP address dynamically from the active network interface and external IP services.
+4. **10-Year SSL Certificate Generation:**
+   - Generates a 2048-bit RSA Private Key (`server/ssl/key.pem`) and X.509 Certificate (`server/ssl/cert.pem`) with Subject Alternative Names (SANs) for both your public server IP and `localhost`.
+   - Also auto-detects and binds any existing Let's Encrypt certificates in `/etc/letsencrypt/live/`.
+5. **PM2 Process Supervisor Setup:**
    - Registers and launches the cPanel backend as a persistent background daemon: `node-cpanel`.
-   - Saves the process list so the panel restarts automatically on system reboots.
-5. **Frontend Compilation**:
-   - Compiles the React production bundle (`build/`) served statically by Express with 0 extra web server required.
+   - Executes `pm2 save` and `pm2 startup` so cPanel starts automatically on system reboots.
+6. **Pre-Compiled Production Frontend:**
+   - Serves the compiled production React application from `build/` with zero extra build steps required.
 
 ---
 
 ## 🔑 Accessing Your Panel
 
-Once the setup completes, your panel will be live immediately:
+Once installation completes, your panel is live immediately:
 
 | Interface | URL | Description |
 | :--- | :--- | :--- |
 | **Public HTTP** | `http://<YOUR_SERVER_IP>:5200` | Standard web panel access |
 | **Secure HTTPS** | `https://<YOUR_SERVER_IP>:5443` | Encrypted SSL panel access |
-| **Localhost** | `http://localhost:5200` | Local server browser access |
+| **Local Access** | `http://localhost:5200` | Local server browser access |
 
-### Default Super Admin Credentials:
-- **Username**: `admin`
-- **Password**: `admin123`
+### Default Superadmin Credentials:
+- **Username:** `admin`
+- **Password:** `admin123`
 
-*(You can change your password anytime under the **User Manager** section)*
-
----
-
-## 🛡️ Firewall / Port Configuration (UFW)
-
-If your server has a firewall enabled (`ufw` on Ubuntu or Security Groups on AWS/DigitalOcean), open both panel ports with this 1-line command:
-
-```bash
-# ⚡ 1-Line command to allow both cPanel ports
-sudo ufw allow 5200/tcp && sudo ufw allow 5443/tcp && sudo ufw reload
-```
-
-Or configure all hosting ports (cPanel, Hosted Domains, SSL, & MySQL):
-
-```bash
-sudo ufw allow 5200/tcp comment "Parakshtech cPanel HTTP"
-sudo ufw allow 5443/tcp comment "Parakshtech cPanel HTTPS"
-sudo ufw allow 80/tcp   comment "Hosted Domains HTTP"
-sudo ufw allow 443/tcp  comment "Hosted Domains HTTPS"
-sudo ufw allow 3306/tcp comment "MySQL"
-sudo ufw reload
-```
+*(You can change your password or create additional users anytime in the **User Manager** section).*
 
 ---
 
-## 🛠️ Server Management Commands
+## 🌐 Hosting Domains & Automated Nginx Synchronization
+
+Parakshtech cPanel features **Full Automatic Web Server Synchronization**:
+
+### 1. Adding a Domain in the Panel:
+1. Open the cPanel dashboard at `http://<YOUR_SERVER_IP>:5200`.
+2. Navigate to **Domains & VHosts** (or click **Domains** in the sidebar).
+3. Enter your domain (e.g. `gaurishankartemple.com`).
+4. Click **Provision & Allocate Domain**.
+
+### 2. What Happens Automatically Behind the Scenes:
+- **Document Root Provisioned:** Creates the website folder at `/var/www/html/cpanel/hosting_data/www/<domain>/`.
+- **Starter HTML Created:** Generates a branded `index.html` starter page.
+- **Nginx Config Generated:** Writes `/etc/nginx/sites-available/<domain>` and creates a symlink in `/etc/nginx/sites-enabled/<domain>`.
+- **Nginx Reloaded:** Automatically tests (`nginx -t`) and reloads Nginx so the domain is live on Port 80 immediately.
+- **Let's Encrypt SSL Provisioned:** Automatically triggers Certbot in the background to issue a free SSL certificate for `https://<domain>`.
+- **DNS Records Seeded:** Pre-populates the DNS zone with `A`, `CNAME`, `MX`, and `NS` records pointing to your public server IP.
+
+### 3. Uploading Your Website Files:
+1. Open **File Manager** from the cPanel dashboard.
+2. Navigate to `/hosting_data/www/<domain>/`.
+3. Upload your website files (`index.html`, `style.css`, images, or zip archive).
+4. Extract zip files directly in the browser with 1 click.
+
+---
+
+## 🛰️ Custom Nameservers & DNS Delegation (GoDaddy, Namecheap, Hostinger)
+
+Parakshtech cPanel includes an RFC-compliant **Authoritative DNS Nameserver** running on Port 53 (UDP/TCP).
+
+To point your domain to your cPanel server using **Nameservers (NS)** instead of A records:
+
+### Step 1: Register Glue Records (Host Names) at Your Registrar
+Because your nameserver uses your own domain (e.g. `ns1.yourdomain.com`), your registrar requires Glue Records:
+1. Log in to your domain registrar (GoDaddy, Namecheap, Hostinger, etc.).
+2. Go to **DNS** -> **Host Names** (or **Glue Records** / **Child Nameservers**).
+3. Add two host names pointing to your public server IP:
+   - **Host:** `ns1` &rarr; **IP Address:** `<YOUR_SERVER_IP>`
+   - **Host:** `ns2` &rarr; **IP Address:** `<YOUR_SERVER_IP>`
+4. Save the host names.
+
+### Step 2: Update Your Domain Nameservers
+1. In your registrar's DNS settings, switch from default registrar nameservers to **Custom Nameservers**.
+2. Enter:
+   - `ns1.yourdomain.com`
+   - `ns2.yourdomain.com`
+3. Save. All DNS queries for your domain and subdomains will now be answered directly by your Parakshtech cPanel server!
+
+---
+
+## 🔄 Updating cPanel (1-Command Update)
+
+Whenever new features or patches are released on GitHub, update your server in 10 seconds:
+
+```bash
+cd /var/www/html/cpanel
+git pull origin main
+pm2 restart node-cpanel
+```
+
+---
+
+## 🛠️ Handy Server Management Commands
 
 | Action | Command |
 | :--- | :--- |
-| **View Live Server Logs** | `pm2 logs node-cpanel` |
-| **Restart cPanel Server** | `pm2 restart node-cpanel` |
-| **Stop cPanel Server** | `pm2 stop node-cpanel` |
-| **Check PM2 Status** | `pm2 status` |
-| **Configure PM2 Auto-boot** | `pm2 startup` && `pm2 save` |
+| **View Live cPanel Logs** | `pm2 logs node-cpanel` |
+| **Restart cPanel Daemon** | `pm2 restart node-cpanel` |
+| **Stop cPanel Daemon** | `pm2 stop node-cpanel` |
+| **Check Process Status** | `pm2 status` |
+| **Test Nginx Configuration** | `sudo nginx -t` |
+| **Reload Nginx Server** | `sudo systemctl reload nginx` |
+| **Renew All SSL Certificates** | `sudo certbot renew` |
+| **Check MySQL Status** | `sudo systemctl status mysql` |
 
 ---
 
-## 📦 Key Features Included
+## 🛡️ Troubleshooting & FAQs
 
-- **cPanel Paper Lantern & Jupiter UI**: Authentic design matching real hosting control panels.
-- **Node.js App & PM2 Manager**: Deploy Node.js apps with auto-install dependencies (`npm install`), 1-click Start/Stop/Restart, and real-time logs modal.
-- **Automated SSL Management**: Generate and bind SSL certificates to any allocated domain.
-- **DNS Zone Editor & Nameservers**: Auto-generates authoritative nameservers (`ns1.<domain>`, `ns2.<domain>`) and manages A, CNAME, MX, and TXT records.
-- **MySQL Database & User Manager**: Create schemas, users, grant permissions, and execute live queries via the SQL Console.
-- **In-Browser File Manager**: Create, upload, edit, rename, extract zip archives, and inspect permissions.
-- **Web Terminal Console**: Large real-world terminal emulator for executing server commands.
-- **1-Click Application Installer**: Deploy WordPress, Express APIs, React apps, and static websites in 1 click.
-- **Disk Quota & Space Isolation**: Monitor server storage, isolate storage per domain/user, and clean temp files.
+### Q: Why does my browser say "Not Secure"?
+- **Accessing via IP Address:** SSL certificates only validate domain names (e.g. `https://parakshtech.com`). Accessing via raw IP (`https://173.212.235.87`) will always show a certificate warning.
+- **Browser SSL Cache:** If a temporary certificate was recently replaced, open an **Incognito / Private tab** or clear browser cache to load the new Let's Encrypt certificate.
+- **Certbot Renewal:** Ensure your certificate is active: `sudo certbot certificates`.
+
+### Q: Why did a domain show "Cannot GET /"?
+This occurs if Port 443 falls back to a default backend because Nginx does not yet have an SSL block for that domain. Run:
+```bash
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+sudo systemctl reload nginx
+```
+
+### Q: How do I change the default port (5200)?
+Edit `/var/www/html/cpanel/.env` and update `PORT=5200` to your desired port, open the port in UFW, and run `pm2 restart node-cpanel`.
+
+---
+
+## 📄 License
+
+MIT License. Designed and maintained by Parakshtech. Replicate, deploy, and scale freely.
