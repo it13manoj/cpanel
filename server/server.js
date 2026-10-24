@@ -82,7 +82,10 @@ app.use(async (req, res, next) => {
     return next();
   }
 
-  const rawHost = (req.headers.host || '').split(':')[0].toLowerCase();
+  // Extract host, checking X-Forwarded-Host first for reverse proxy compatibility
+  const forwardHost = req.headers['x-forwarded-host'];
+  const headerHost = forwardHost ? forwardHost.split(',')[0] : (req.headers.host || '');
+  const rawHost = headerHost.split(':')[0].trim().toLowerCase();
 
   // If accessed directly via Server IP address (e.g. 173.212.235.87) or localhost, serve cPanel Control Panel
   if (!rawHost || rawHost === 'localhost' || rawHost === '127.0.0.1' || /^(\d{1,3}\.){3}\d{1,3}$/.test(rawHost)) {
@@ -133,25 +136,37 @@ app.use(async (req, res, next) => {
 
   if (domain && domain.doc_root) {
     try {
-      if (!fs.existsSync(domain.doc_root)) {
-        fs.mkdirSync(domain.doc_root, { recursive: true });
+      const docRoot = path.resolve(domain.doc_root);
+      if (!fs.existsSync(docRoot)) {
+        fs.mkdirSync(docRoot, { recursive: true });
       }
 
-      // Check if requested file exists in domain doc_root
+      // 1. Direct file request (e.g. /style.css, /about.html, /logo.png)
       const requestedRel = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
-      const filePath = path.join(domain.doc_root, requestedRel);
+      const filePath = path.join(docRoot, requestedRel);
 
       if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         return res.sendFile(filePath);
       }
 
-      // Default index.html
-      const defaultIndex = path.join(domain.doc_root, 'index.html');
-      if (fs.existsSync(defaultIndex)) {
-        return res.sendFile(defaultIndex);
+      // 2. Common index file candidates
+      for (const indexName of ['index.html', 'index.htm', 'default.html', 'home.html']) {
+        const candidate = path.join(docRoot, indexName);
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+          return res.sendFile(candidate);
+        }
       }
 
-      // If no file exists yet, serve a starter page
+      // 3. Any uploaded HTML file in docRoot
+      try {
+        const dirFiles = fs.readdirSync(docRoot);
+        const htmlFile = dirFiles.find(f => (f.endsWith('.html') || f.endsWith('.htm')) && !f.startsWith('.'));
+        if (htmlFile) {
+          return res.sendFile(path.join(docRoot, htmlFile));
+        }
+      } catch (e) {}
+
+      // 4. Default starter template if docRoot is empty
       const starterHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -174,6 +189,7 @@ app.use(async (req, res, next) => {
   </div>
 </body>
 </html>`;
+      const defaultIndex = path.join(docRoot, 'index.html');
       fs.writeFileSync(defaultIndex, starterHtml, 'utf8');
       return res.sendFile(defaultIndex);
 
