@@ -34,8 +34,28 @@ const HTTPS_PORT = process.env.HTTPS_PORT || 5443;
 // Optional HTTPS Server with auto-loaded SSL certificates
 let httpsServer = null;
 let httpsWss = null;
-const sslCertPath = path.resolve(__dirname, 'ssl/cert.pem');
-const sslKeyPath = path.resolve(__dirname, 'ssl/key.pem');
+
+// Support custom SSL paths or auto-detect Let's Encrypt
+let sslCertPath = process.env.SSL_CERT_PATH || path.resolve(__dirname, 'ssl/cert.pem');
+let sslKeyPath = process.env.SSL_KEY_PATH || path.resolve(__dirname, 'ssl/key.pem');
+
+// Auto-detect Let's Encrypt certificates on Linux if available
+try {
+  const letsEncryptBase = '/etc/letsencrypt/live';
+  if (fs.existsSync(letsEncryptBase)) {
+    const domains = fs.readdirSync(letsEncryptBase);
+    for (const d of domains) {
+      const candidateCert = path.join(letsEncryptBase, d, 'fullchain.pem');
+      const candidateKey = path.join(letsEncryptBase, d, 'privkey.pem');
+      if (fs.existsSync(candidateCert) && fs.existsSync(candidateKey)) {
+        sslCertPath = candidateCert;
+        sslKeyPath = candidateKey;
+        console.log(`🔒 Auto-detected Let's Encrypt SSL certificate for domain: ${d}`);
+        break;
+      }
+    }
+  }
+} catch (e) {}
 
 if (fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
   try {
@@ -45,7 +65,7 @@ if (fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
     };
     httpsServer = https.createServer(sslOptions, app);
     httpsWss = new WebSocket.Server({ server: httpsServer });
-    console.log('🔒 SSL Certificates loaded for HTTPS listener.');
+    console.log(`🔒 SSL Certificates loaded from ${sslCertPath}`);
   } catch (sslErr) {
     console.warn('⚠️ Could not load SSL certificates:', sslErr.message);
   }
