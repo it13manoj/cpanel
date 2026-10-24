@@ -55,10 +55,21 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Domain Virtual Host Router / Static Host Handler
+// Only perform VHost routing if explicitly configured for a hosted domain and NOT on the cPanel admin port
 app.use(async (req, res, next) => {
+  // Never intercept API routes or assets
+  if (req.path.startsWith('/api') || req.path.startsWith('/static')) {
+    return next();
+  }
+
+  // Any request on the cPanel management ports (5200, 5443, or custom PORT) serves the cPanel Control Panel UI
+  const reqPort = (req.headers.host || '').split(':')[1];
+  if (reqPort === String(PORT) || reqPort === String(HTTPS_PORT) || (!reqPort && (PORT === 5200 || HTTPS_PORT === 5443))) {
+    return next();
+  }
+
   const host = (req.headers.host || '').split(':')[0].toLowerCase();
-  if (req.path.startsWith('/api') || host === 'localhost' || host === '127.0.0.1') {
+  if (host === 'localhost' || host === '127.0.0.1') {
     return next();
   }
 
@@ -205,35 +216,6 @@ async function startServer() {
         console.log(`🔒 Secure HTTPS cPanel is LIVE on https://0.0.0.0:${HTTPS_PORT}`);
         console.log(`📡 Secure WSS Metrics live on wss://0.0.0.0:${HTTPS_PORT}`);
       });
-    }
-
-    // Also bind standard web ports 80 & 443 for hosted websites & domains
-    if (PORT !== 80) {
-      try {
-        const webServerHttp = http.createServer(app);
-        webServerHttp.listen(80, '0.0.0.0', () => {
-          console.log(`🌐 Public Domains Web Server (Port 80) is LIVE on http://0.0.0.0:80`);
-        });
-        webServerHttp.on('error', (err) => {
-          console.warn(`ℹ️ Port 80 web listener notice: ${err.message}`);
-        });
-      } catch (e) {}
-    }
-
-    if (HTTPS_PORT !== 443 && fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
-      try {
-        const sslOptions = {
-          cert: fs.readFileSync(sslCertPath),
-          key: fs.readFileSync(sslKeyPath)
-        };
-        const webServerHttps = https.createServer(sslOptions, app);
-        webServerHttps.listen(443, '0.0.0.0', () => {
-          console.log(`🔒 Public Domains HTTPS Server (Port 443) is LIVE on https://0.0.0.0:443`);
-        });
-        webServerHttps.on('error', (err) => {
-          console.warn(`ℹ️ Port 443 web listener notice: ${err.message}`);
-        });
-      } catch (e) {}
     }
   } catch (error) {
     console.error('Fatal startup error:', error);

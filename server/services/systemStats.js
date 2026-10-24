@@ -31,6 +31,25 @@ setInterval(() => {
 }, 1000);
 
 let cachedMySQLVersion = '8.0';
+let cachedServerIp = null;
+
+function detectServerIp() {
+  if (cachedServerIp) return cachedServerIp;
+  if (process.env.SERVER_IP) {
+    cachedServerIp = process.env.SERVER_IP;
+    return cachedServerIp;
+  }
+  const interfaces = os.networkInterfaces();
+  for (const iface of Object.values(interfaces)) {
+    for (const config of iface) {
+      if (config.family === 'IPv4' && !config.internal && !config.address.startsWith('127.')) {
+        cachedServerIp = config.address;
+        return cachedServerIp;
+      }
+    }
+  }
+  return '173.212.235.87';
+}
 
 async function getSystemMetrics(pool) {
   try {
@@ -87,6 +106,7 @@ async function getSystemMetrics(pool) {
 
     return {
       timestamp: Date.now(),
+      serverIp: detectServerIp(),
       os: {
         platform: os.platform() === 'win32' ? 'Windows' : os.platform(),
         distro: `${os.type()} ${os.release()}`,

@@ -33,12 +33,16 @@ export default function CPanelClassicLayout({
   currentUser,
   onLogout,
   metrics,
+  domains = [],
   activeTool,
   setActiveTool,
   children
 }) {
   const [filterText, setFilterText] = useState('');
   const [collapsedSections, setCollapsedSections] = useState({});
+
+  const serverIp = metrics?.serverIp || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? window.location.hostname : '173.212.235.87');
+  const primaryDomain = domains?.[0]?.domain_name || currentUser?.allocated_domain || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? window.location.hostname : 'gaurishankartemple.com');
 
   const toggleSection = (secName) => {
     setCollapsedSections((prev) => ({
@@ -263,13 +267,15 @@ export default function CPanelClassicLayout({
                     <span className="info-meta-label">Primary Domain <span className="text-xs text-muted">(DV Certificate)</span></span>
                     <span className="info-meta-val text-primary flex items-center gap-1">
                       <Lock size={12} className="text-emerald" />
-                      <span>{currentUser?.allocated_domain || 'localhost'}</span>
-                      <ExternalLink size={11} />
+                      <span>{primaryDomain}</span>
+                      <a href={`http://${primaryDomain}`} target="_blank" rel="noreferrer" className="text-primary hover:text-white inline-flex items-center">
+                        <ExternalLink size={11} />
+                      </a>
                     </span>
                   </div>
                   <div className="info-meta-row">
                     <span className="info-meta-label">Shared IP Address</span>
-                    <span className="info-meta-val">127.0.0.1</span>
+                    <span className="info-meta-val font-semibold">{serverIp}</span>
                   </div>
                   <div className="info-meta-row">
                     <span className="info-meta-label">Home Directory</span>
@@ -277,7 +283,7 @@ export default function CPanelClassicLayout({
                   </div>
                   <div className="info-meta-row">
                     <span className="info-meta-label">Last Login IP Address</span>
-                    <span className="info-meta-val">127.0.0.1</span>
+                    <span className="info-meta-val">{serverIp}</span>
                   </div>
                   <div className="info-meta-row">
                     <span className="info-meta-label">Theme</span>

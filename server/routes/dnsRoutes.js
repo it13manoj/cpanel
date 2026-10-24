@@ -47,7 +47,7 @@ async function getPublicServerIP() {
     }
   }
 
-  return '127.0.0.1';
+  return '173.212.235.87';
 }
 
 // Ensure the dns_records table exists

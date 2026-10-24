@@ -169,6 +169,7 @@ export default function App() {
       currentUser={currentUser}
       onLogout={handleLogout}
       metrics={metrics}
+      domains={domains}
       activeTool={activeTool}
       setActiveTool={setActiveTool}
     >

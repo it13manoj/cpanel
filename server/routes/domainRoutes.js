@@ -10,6 +10,35 @@ module.exports = (pool) => {
   router.get('/', async (req, res) => {
     try {
       const [rows] = await pool.query('SELECT * FROM domains ORDER BY created_at DESC');
+
+      // Auto-ensure domain.config.json and vhost config exist for every domain
+      const vhostDir = path.resolve(__dirname, '../../hosting_data/vhosts');
+      if (!fs.existsSync(vhostDir)) fs.mkdirSync(vhostDir, { recursive: true });
+
+      for (const dom of rows) {
+        try {
+          if (!fs.existsSync(dom.doc_root)) {
+            fs.mkdirSync(dom.doc_root, { recursive: true });
+          }
+          const vhostFile = path.join(vhostDir, `${dom.domain_name}.json`);
+          const docConfigFile = path.join(dom.doc_root, 'domain.config.json');
+          const domConfig = {
+            domain_name: dom.domain_name,
+            doc_root: dom.doc_root,
+            proxy_type: dom.proxy_type || 'static',
+            proxy_port: dom.proxy_port || null,
+            created_at: dom.created_at,
+            status: dom.status || 'active'
+          };
+          if (!fs.existsSync(vhostFile)) {
+            fs.writeFileSync(vhostFile, JSON.stringify(domConfig, null, 2), 'utf8');
+          }
+          if (!fs.existsSync(docConfigFile)) {
+            fs.writeFileSync(docConfigFile, JSON.stringify(domConfig, null, 2), 'utf8');
+          }
+        } catch (e) {}
+      }
+
       res.json({ success: true, domains: rows });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
