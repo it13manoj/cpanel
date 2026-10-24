@@ -211,8 +211,45 @@ export default function FileManagerView({ initialPath }) {
     }
   };
 
-  // Upload handler (regular & drag-drop)
-  const processUploadFiles = async (fileList) => {
+  // Helper to recursively traverse dropped files and directories
+  const scanDataTransferItem = async (entry, relativePath = '') => {
+    if (entry.isFile) {
+      return new Promise((resolve) => {
+        entry.file((file) => {
+          resolve([{ file, relPath: relativePath ? `${relativePath}/${file.name}` : file.name }]);
+        }, () => resolve([]));
+      });
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      const currentDirRel = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+      
+      const readAllEntries = async () => {
+        const allEntries = [];
+        let done = false;
+        while (!done) {
+          const batch = await new Promise((res) => dirReader.readEntries(res, () => res([])));
+          if (batch.length === 0) {
+            done = true;
+          } else {
+            allEntries.push(...batch);
+          }
+        }
+        return allEntries;
+      };
+
+      const entries = await readAllEntries();
+      const nestedResults = [];
+      for (const child of entries) {
+        const subFiles = await scanDataTransferItem(child, currentDirRel);
+        nestedResults.push(...subFiles);
+      }
+      return nestedResults;
+    }
+    return [];
+  };
+
+  // Upload handler preserving full nested directory structures
+  const processUploadFiles = async (fileList, relativePaths = []) => {
     if (!fileList || fileList.length === 0) return;
 
     const formData = new FormData();
@@ -221,10 +258,14 @@ export default function FileManagerView({ initialPath }) {
       formData.append('files', fileList[i]);
     }
 
+    if (relativePaths && relativePaths.length > 0) {
+      formData.append('paths', JSON.stringify(relativePaths));
+    }
+
     try {
       setLoading(true);
       await api.uploadFiles(formData);
-      setMessage(`Uploaded ${fileList.length} file(s) successfully.`);
+      setMessage(`Uploaded ${fileList.length} file(s) preserving complete directory structure.`);
       loadFiles(currentPath);
     } catch (err) {
       setError('Upload failed: ' + err.message);
@@ -239,7 +280,14 @@ export default function FileManagerView({ initialPath }) {
     processUploadFiles(e.target.files);
   };
 
-  // Drag & Drop event handlers
+  const handleFolderUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const paths = files.map((f) => f.webkitRelativePath || f.name);
+    processUploadFiles(files, paths);
+  };
+
+  // Drag & Drop event handlers with full directory traversal
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -259,10 +307,39 @@ export default function FileManagerView({ initialPath }) {
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+      const fileDataList = [];
+      const promises = [];
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.webkitGetAsEntry) {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            promises.push(scanDataTransferItem(entry));
+          }
+        }
+      }
+
+      const results = await Promise.all(promises);
+      for (const res of results) {
+        fileDataList.push(...res);
+      }
+
+      if (fileDataList.length > 0) {
+        const files = fileDataList.map((d) => d.file);
+        const paths = fileDataList.map((d) => d.relPath);
+        processUploadFiles(files, paths);
+        return;
+      }
+    }
+
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processUploadFiles(e.dataTransfer.files);
     }
@@ -318,14 +395,27 @@ export default function FileManagerView({ initialPath }) {
             <Folder size={14} />
             <span>New Folder</span>
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => fileInputRef.current?.click()}>
+          <button className="btn btn-secondary-sm" onClick={() => fileInputRef.current?.click()}>
             <Upload size={14} />
             <span>Upload Files</span>
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => folderInputRef.current?.click()} title="Upload an entire project folder with nested directories">
+            <FolderTree size={14} />
+            <span>Upload Folder</span>
           </button>
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
+            multiple
+            style={{ display: 'none' }}
+          />
+          <input
+            type="file"
+            ref={folderInputRef}
+            onChange={handleFolderUpload}
+            webkitdirectory="true"
+            directory="true"
             multiple
             style={{ display: 'none' }}
           />

@@ -314,7 +314,7 @@ module.exports = (pool) => {
     }
   });
 
-  // Upload file(s)
+  // Upload file(s) with preservation of directory structures (relative paths)
   router.post('/upload', upload.array('files'), async (req, res) => {
     try {
       const targetDir = resolveSafePath(req.body.destination || '');
@@ -322,18 +322,43 @@ module.exports = (pool) => {
         fs.mkdirSync(targetDir, { recursive: true });
       }
 
+      // paths is array of relative paths corresponding to each file in req.files
+      let relPaths = [];
+      if (req.body.paths) {
+        if (Array.isArray(req.body.paths)) {
+          relPaths = req.body.paths;
+        } else {
+          try {
+            relPaths = JSON.parse(req.body.paths);
+          } catch (e) {
+            relPaths = [req.body.paths];
+          }
+        }
+      }
+
       const uploadedFiles = [];
-      for (const file of req.files) {
-        const destPath = path.join(targetDir, file.originalname);
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
+        const relativeFilePath = relPaths[i] || file.originalname;
+
+        // Clean relative path to prevent directory traversal
+        const cleanRelPath = path.normalize(relativeFilePath).replace(/^(\.\.[\/\\])+/, '');
+        const destPath = path.join(targetDir, cleanRelPath);
+        const parentDir = path.dirname(destPath);
+
+        if (!fs.existsSync(parentDir)) {
+          fs.mkdirSync(parentDir, { recursive: true });
+        }
+
         fs.copyFileSync(file.path, destPath);
         fs.unlinkSync(file.path); // clean temp
-        uploadedFiles.push(file.originalname);
+        uploadedFiles.push(cleanRelPath);
       }
 
       if (pool) {
         await pool.query(
           'INSERT INTO activity_logs (module, action, details) VALUES (?, ?, ?)',
-          ['FILE_MANAGER', `Uploaded ${uploadedFiles.length} file(s)`, `Dest: ${req.body.destination || '/'}`]
+          ['FILE_MANAGER', `Uploaded ${uploadedFiles.length} file(s) preserving folder tree`, `Dest: ${req.body.destination || '/'}`]
         );
       }
 
