@@ -75,74 +75,114 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Only perform VHost routing if explicitly configured for a hosted domain and NOT on the cPanel admin port
+// Domain Virtual Host Router / Static Host Handler
 app.use(async (req, res, next) => {
-  // Never intercept API routes or assets
+  // Never intercept cPanel API routes or static build assets
   if (req.path.startsWith('/api') || req.path.startsWith('/static')) {
     return next();
   }
 
-  // Any request on the cPanel management ports (5200, 5443, or custom PORT) serves the cPanel Control Panel UI
-  const reqPort = (req.headers.host || '').split(':')[1];
-  if (reqPort === String(PORT) || reqPort === String(HTTPS_PORT) || (!reqPort && (PORT === 5200 || HTTPS_PORT === 5443))) {
+  const rawHost = (req.headers.host || '').split(':')[0].toLowerCase();
+
+  // If accessed directly via Server IP address (e.g. 173.212.235.87) or localhost, serve cPanel Control Panel
+  if (!rawHost || rawHost === 'localhost' || rawHost === '127.0.0.1' || /^(\d{1,3}\.){3}\d{1,3}$/.test(rawHost)) {
     return next();
   }
 
-  const host = (req.headers.host || '').split(':')[0].toLowerCase();
-  if (host === 'localhost' || host === '127.0.0.1') {
+  // If user visits domain.com/cpanel, pass through to cPanel Control Panel
+  if (req.path.startsWith('/cpanel')) {
     return next();
   }
 
-  const cleanHost = host.replace(/^www\./, '');
+  const cleanHost = rawHost.replace(/^www\./, '');
 
   const pool = getPool();
+  let domain = null;
+
   if (pool) {
     try {
       const [rows] = await pool.query(
         'SELECT * FROM `cpanel`.`domains` WHERE (domain_name = ? OR domain_name = ? OR domain_name = ?) AND status = "active"',
-        [host, cleanHost, `www.${cleanHost}`]
+        [rawHost, cleanHost, `www.${cleanHost}`]
       );
-      if (rows.length > 0) {
-        const domain = rows[0];
-        if (domain.proxy_type === 'proxy' && domain.proxy_port) {
-          return res.redirect(`http://localhost:${domain.proxy_port}${req.url}`);
-        } else {
-          const targetPath = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
-          const filePath = path.join(domain.doc_root, targetPath);
-          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-            return res.sendFile(filePath);
-          }
-          const defaultIndex = path.join(domain.doc_root, 'index.html');
-          if (fs.existsSync(defaultIndex)) {
-            return res.sendFile(defaultIndex);
-          }
-          return express.static(domain.doc_root)(req, res, next);
-        }
+      if (rows && rows.length > 0) {
+        domain = rows[0];
       }
     } catch (e) {
       console.error('VHost lookup error:', e);
     }
   }
 
-  // Disk VHost Fallback (domain.config.json)
-  try {
-    const configPath = path.resolve(__dirname, `../hosting_data/vhosts/${cleanHost}.json`);
-    if (fs.existsSync(configPath)) {
-      const vhostConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (vhostConfig.doc_root && fs.existsSync(vhostConfig.doc_root)) {
-        const targetPath = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
-        const filePath = path.join(vhostConfig.doc_root, targetPath);
-        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-          return res.sendFile(filePath);
-        }
-        const defaultIndex = path.join(vhostConfig.doc_root, 'index.html');
-        if (fs.existsSync(defaultIndex)) {
-          return res.sendFile(defaultIndex);
-        }
+  // Fallback to on-disk vhost config
+  if (!domain) {
+    try {
+      const configPath = path.resolve(__dirname, `../hosting_data/vhosts/${cleanHost}.json`);
+      if (fs.existsSync(configPath)) {
+        domain = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       }
-    }
-  } catch (e) {}
+    } catch (e) {}
+  }
 
+  // Direct document root lookup under hosting_data/www
+  if (!domain) {
+    const directDocRoot = path.resolve(__dirname, `../hosting_data/www/${cleanHost}`);
+    if (fs.existsSync(directDocRoot)) {
+      domain = { domain_name: cleanHost, doc_root: directDocRoot, proxy_type: 'static' };
+    }
+  }
+
+  if (domain && domain.doc_root) {
+    try {
+      if (!fs.existsSync(domain.doc_root)) {
+        fs.mkdirSync(domain.doc_root, { recursive: true });
+      }
+
+      // Check if requested file exists in domain doc_root
+      const requestedRel = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+      const filePath = path.join(domain.doc_root, requestedRel);
+
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        return res.sendFile(filePath);
+      }
+
+      // Default index.html
+      const defaultIndex = path.join(domain.doc_root, 'index.html');
+      if (fs.existsSync(defaultIndex)) {
+        return res.sendFile(defaultIndex);
+      }
+
+      // If no file exists yet, serve a starter page
+      const starterHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to ${domain.domain_name}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card { background: #1e293b; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; border: 1px solid #334155; max-width: 500px; }
+    h1 { color: #38bdf8; margin: 0 0 1rem; font-size: 1.8rem; }
+    p { color: #94a3b8; line-height: 1.6; }
+    .badge { display: inline-block; background: #0284c7; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">Parakshtech cPanel</span>
+    <h1>Website Active: ${domain.domain_name}</h1>
+    <p>Your domain is active. Upload your website files into this domain's directory via cPanel File Manager to replace this page.</p>
+  </div>
+</body>
+</html>`;
+      fs.writeFileSync(defaultIndex, starterHtml, 'utf8');
+      return res.sendFile(defaultIndex);
+
+    } catch (err) {
+      console.error(`Error serving domain ${domain.domain_name}:`, err);
+    }
+  }
+
+  // If not a hosted domain, proceed to next middleware (cPanel React app or API)
   next();
 });
 
