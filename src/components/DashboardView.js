@@ -62,7 +62,7 @@ export default function DashboardView({ metrics, setActiveTab, logs }) {
         <div className="hero-quick-meta">
           <div className="hero-meta-item">
             <span className="hero-meta-label">Connected Database</span>
-            <span className="hero-meta-val text-success">cpanel @ localhost</span>
+            <span className="hero-meta-val text-success">cpanel @ {metrics?.serverIp || (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' ? window.location.hostname : '173.212.235.87')}</span>
           </div>
           <div className="hero-meta-item">
             <span className="hero-meta-label">DB User</span>
@@ -221,8 +221,8 @@ export default function DashboardView({ metrics, setActiveTab, logs }) {
                 <span className="spec-val">{metrics?.os?.distro || 'Windows'} ({metrics?.os?.arch || 'x64'})</span>
               </div>
               <div className="spec-row">
-                <span className="spec-key">Server Hostname</span>
-                <span className="spec-val">{metrics?.os?.hostname || 'localhost'}</span>
+                <span className="spec-key">Server Host / IP</span>
+                <span className="spec-val font-semibold text-primary">{metrics?.serverIp || metrics?.os?.hostname || '173.212.235.87'}</span>
               </div>
               <div className="spec-row">
                 <span className="spec-key">MySQL Engine</span>

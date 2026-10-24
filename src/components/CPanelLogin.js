@@ -137,7 +137,7 @@ export default function CPanelLogin({ onLoginSuccess }) {
           {/* Connected Database Info */}
           <div className="login-db-meta">
             <Database size={13} className="text-emerald" />
-            <span>Connected Database: <strong>cpanel</strong> on localhost:3306</span>
+            <span>Connected Database: <strong>cpanel</strong> on {typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' ? window.location.hostname : '173.212.235.87'}:3306</span>
           </div>
         </div>
 

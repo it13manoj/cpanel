@@ -145,7 +145,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains }) {
               </button>
               {deployedProject.port && (
                 <a
-                  href={`http://localhost:${deployedProject.port}`}
+                  href={`http://${typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : '173.212.235.87'}:${deployedProject.port}`}
                   target="_blank"
                   rel="noreferrer"
                   className="btn btn-secondary-sm"

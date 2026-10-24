@@ -348,7 +348,7 @@ export default function FileManagerView({ initialPath }) {
                                 <Edit size={14} />
                               </button>
                               <a
-                                href={`http://localhost:5000/api/files/download?path=${encodeURIComponent(currentPath ? `${currentPath}/${item.name}` : item.name)}`}
+                                href={`/api/files/download?path=${encodeURIComponent(currentPath ? `${currentPath}/${item.name}` : item.name)}`}
                                 className="btn-icon-sm"
                                 title="Download File"
                                 download

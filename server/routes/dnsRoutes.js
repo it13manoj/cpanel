@@ -124,12 +124,20 @@ module.exports = (pool) => {
       // Auto-generate defaults if none exist
       await ensureDefaultDnsRecords(pool, domainId, domain);
 
+      const serverIp = await getPublicServerIP();
+
+      // Auto-update any legacy records that had 127.0.0.1 to the live public server IP
+      try {
+        await pool.query(
+          'UPDATE `cpanel`.`dns_records` SET value = ? WHERE domain_name = ? AND value = "127.0.0.1" AND record_type = "A"',
+          [serverIp, domain]
+        );
+      } catch (e) {}
+
       const [records] = await pool.query(
         'SELECT * FROM `cpanel`.`dns_records` WHERE domain_name = ? ORDER BY record_type ASC, name ASC',
         [domain]
       );
-
-      const serverIp = await getPublicServerIP();
 
       res.json({
         success: true,

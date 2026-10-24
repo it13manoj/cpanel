@@ -502,7 +502,7 @@ export default function AppsView() {
                             {/* Browser Preview Link */}
                             {app.port && isRunning && (
                               <a
-                                href={`http://localhost:${app.port}`}
+                                href={`http://${typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : '173.212.235.87'}:${app.port}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="btn-icon-sm text-primary"
