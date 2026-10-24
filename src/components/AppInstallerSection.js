@@ -4,43 +4,18 @@ import {
   CheckCircle,
   AlertCircle,
   Database,
-  Layout,
-  ShoppingCart,
-  BookOpen,
-  Terminal,
   ArrowRight,
   ExternalLink,
   FolderTree,
-  Server,
   Search,
-  Filter,
-  Sparkles,
-  KeyRound,
-  Mail,
-  Globe,
-  HardDrive,
   Copy,
   Check,
   X,
   RefreshCw,
-  ShoppingBag,
-  MessageSquare,
-  Users,
-  Code,
-  Zap,
-  Box,
-  Layers,
-  Cpu,
-  Coffee,
-  CreditCard,
-  HelpCircle,
-  Briefcase,
-  Cloud,
-  Activity,
-  Send,
-  GitPullRequest
+  Star
 } from 'lucide-react';
 import { api } from '../api';
+import AppBrandIcon from './AppBrandIcons';
 
 export default function AppInstallerSection({ setActiveTab, reloadDomains, domains = [] }) {
   const [templates, setTemplates] = useState([]);
@@ -57,7 +32,6 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
   const [adminPassword, setAdminPassword] = useState('Admin@Pass2026!');
   const [adminEmail, setAdminEmail] = useState('admin@example.com');
   const [port, setPort] = useState(4100);
-  const [quotaMb, setQuotaMb] = useState(1000);
   const [showPassword, setShowPassword] = useState(false);
 
   // Execution & Result State
@@ -124,7 +98,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
         adminPassword,
         adminEmail,
         port: selectedTemplate.portsRequired ? port : null,
-        quotaMb: parseInt(quotaMb, 10)
+        quotaMb: 1000
       });
 
       setMessage(res.message);
@@ -153,34 +127,20 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
     return matchesCategory && matchesSearch;
   });
 
-  const getTemplateIcon = (iconName) => {
-    switch (iconName) {
-      case 'wordpress': return <BookOpen size={24} className="text-cyan" />;
-      case 'joomla': return <Layers size={24} className="text-blue" />;
-      case 'drupal': return <Cloud size={24} className="text-sky" />;
-      case 'ghost': return <Sparkles size={24} className="text-purple" />;
-      case 'shopping-cart': return <ShoppingCart size={24} className="text-emerald" />;
-      case 'shopping-bag': return <ShoppingBag size={24} className="text-teal" />;
-      case 'package': return <Box size={24} className="text-amber" />;
-      case 'credit-card': return <CreditCard size={24} className="text-indigo" />;
-      case 'message-square':
-      case 'messages-square':
-      case 'message-circle': return <MessageSquare size={24} className="text-blue" />;
-      case 'users': return <Users size={24} className="text-cyan" />;
-      case 'code': return <Code size={24} className="text-rose" />;
-      case 'zap': return <Zap size={24} className="text-orange" />;
-      case 'cpu': return <Cpu size={24} className="text-emerald" />;
-      case 'terminal': return <Terminal size={24} className="text-amber" />;
-      case 'coffee': return <Coffee size={24} className="text-orange" />;
-      case 'help-circle': return <HelpCircle size={24} className="text-cyan" />;
-      case 'briefcase': return <Briefcase size={24} className="text-blue" />;
-      case 'cloud': return <Cloud size={24} className="text-sky" />;
-      case 'activity': return <Activity size={24} className="text-indigo" />;
-      case 'mail': return <Mail size={24} className="text-emerald" />;
-      case 'send': return <Send size={24} className="text-cyan" />;
-      case 'git-pull-request': return <GitPullRequest size={24} className="text-purple" />;
-      case 'box': return <Box size={24} className="text-blue" />;
-      default: return <Rocket size={24} className="text-primary" />;
+  const getBadgeStyle = (badge) => {
+    switch (badge) {
+      case 'Most Popular':
+      case 'Top Store':
+        return { backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5' };
+      case 'Enterprise':
+      case 'Web Host':
+        return { backgroundColor: '#f3e8ff', color: '#7e22ce', border: '1px solid #d8b4fe' };
+      case 'Modern':
+      case 'Modern UI':
+      case 'Artisan':
+        return { backgroundColor: '#e0f2fe', color: '#0369a1', border: '1px solid #7dd3fc' };
+      default:
+        return { backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' };
     }
   };
 
@@ -194,7 +154,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
             <span>1-Click Application Installer (App Catalog)</span>
           </h1>
           <p className="view-subtitle">
-            Deploy fullstack CMS, E-Commerce stores, Developer Frameworks, Forums, Helpdesks and DevOps tools onto your server with automated MySQL database setup, Nginx routing and SSL.
+            Deploy complete CMS platforms, E-Commerce stores, Developer Frameworks, Forums, Helpdesks and DevOps tools onto your server with automated MySQL database setup, Nginx routing and SSL.
           </p>
         </div>
       </div>
@@ -216,11 +176,11 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
 
       {/* Deployed Project Success Card */}
       {deployedProject && (
-        <div className="content-card mb-6 border-cyan" style={{ borderLeft: '4px solid #0284c7' }}>
-          <div className="card-header bg-cyan-dim flex justify-between items-center">
+        <div className="content-card mb-6" style={{ borderLeft: '4px solid #0284c7' }}>
+          <div className="card-header bg-slate-50 flex justify-between items-center">
             <div className="card-title-wrap flex items-center gap-2">
-              <CheckCircle size={20} className="text-cyan" />
-              <h3 className="card-title text-cyan" style={{ margin: 0, fontSize: '16px' }}>
+              <CheckCircle size={20} className="text-primary" />
+              <h3 className="card-title" style={{ margin: 0, fontSize: '15px' }}>
                 {deployedProject.template} Installed Successfully!
               </h3>
             </div>
@@ -229,7 +189,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
 
           <div className="card-body">
             <div className="form-grid mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-              <div className="p-3 bg-slate-900 rounded border border-slate-700">
+              <div className="p-3 bg-slate-50 rounded border border-slate-200">
                 <span className="text-xs text-muted block mb-1">Live Website URL:</span>
                 <a
                   href={deployedProject.liveUrl}
@@ -242,7 +202,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                 </a>
               </div>
 
-              <div className="p-3 bg-slate-900 rounded border border-slate-700">
+              <div className="p-3 bg-slate-50 rounded border border-slate-200">
                 <span className="text-xs text-muted block mb-1">Admin Dashboard:</span>
                 <a
                   href={deployedProject.adminUrl}
@@ -255,10 +215,10 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                 </a>
               </div>
 
-              <div className="p-3 bg-slate-900 rounded border border-slate-700">
+              <div className="p-3 bg-slate-50 rounded border border-slate-200">
                 <span className="text-xs text-muted block mb-1">Admin Credentials:</span>
                 <div className="flex items-center justify-between text-xs">
-                  <span>User: <strong className="text-white">{deployedProject.adminUser}</strong></span>
+                  <span>User: <strong className="text-slate-800">{deployedProject.adminUser}</strong></span>
                   <button
                     className="btn-icon-sm"
                     onClick={() => handleCopy(deployedProject.adminUser, 'user')}
@@ -268,7 +228,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                   </button>
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <span>Pass: <strong className="text-cyan">{deployedProject.adminPassword}</strong></span>
+                  <span>Pass: <strong className="text-primary">{deployedProject.adminPassword}</strong></span>
                   <button
                     className="btn-icon-sm"
                     onClick={() => handleCopy(deployedProject.adminPassword, 'pass')}
@@ -279,9 +239,9 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-900 rounded border border-slate-700">
+              <div className="p-3 bg-slate-50 rounded border border-slate-200">
                 <span className="text-xs text-muted block mb-1">MySQL Database:</span>
-                <code className="text-amber font-mono text-xs">{deployedProject.databaseName}</code>
+                <code className="text-slate-800 font-mono text-xs">{deployedProject.databaseName}</code>
                 <span className="text-xs text-muted block mt-1">Port: {deployedProject.port}</span>
               </div>
             </div>
@@ -309,26 +269,52 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
         </div>
       )}
 
-      {/* Search & Category Filter Navigation */}
-      <div className="content-card mb-6 p-4">
+      {/* Search & Category Filter Navigation Bar */}
+      <div className="content-card mb-6" style={{ padding: '1.25rem' }}>
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <div className="header-search-box flex-1" style={{ maxWidth: '420px', minWidth: '240px' }}>
-            <Search size={16} className="header-search-ico" />
+          <div
+            style={{
+              position: 'relative',
+              flex: 1,
+              maxWidth: '440px',
+              minWidth: '260px'
+            }}
+          >
+            <Search
+              size={16}
+              style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#64748b'
+              }}
+            />
             <input
               type="text"
-              placeholder="Search WordPress, Laravel, WooCommerce, Docker..."
+              placeholder="Search WordPress, WooCommerce, Laravel, Docker..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="classic-search-input"
+              style={{
+                width: '100%',
+                padding: '9px 12px 9px 36px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                fontSize: '13px',
+                outline: 'none',
+                boxSizing: 'border-box',
+                backgroundColor: '#ffffff',
+                color: '#1e293b'
+              }}
             />
           </div>
-          <div className="text-xs text-muted font-semibold">
-            Showing {filteredTemplates.length} of {templates.length} Applications
+          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+            Showing <strong>{filteredTemplates.length}</strong> of {templates.length} Applications
           </div>
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex flex-wrap gap-2">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {categories.map((cat) => {
             const count = cat === 'All Applications'
               ? templates.length
@@ -338,29 +324,31 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`btn-filter-pill ${active ? 'active' : ''}`}
                 style={{
                   padding: '6px 14px',
                   borderRadius: '20px',
                   fontSize: '12px',
                   fontWeight: 600,
-                  border: active ? '1px solid #0284c7' : '1px solid #334155',
-                  backgroundColor: active ? '#0284c7' : '#1e293b',
-                  color: active ? '#ffffff' : '#94a3b8',
+                  border: active ? '1px solid #0284c7' : '1px solid #e2e8f0',
+                  backgroundColor: active ? '#0284c7' : '#ffffff',
+                  color: active ? '#ffffff' : '#475569',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  transition: 'all 0.15s ease'
+                  transition: 'all 0.15s ease',
+                  boxShadow: active ? '0 2px 4px rgba(2, 132, 199, 0.25)' : 'none'
                 }}
               >
                 <span>{cat}</span>
                 <span
                   style={{
-                    backgroundColor: active ? '#0369a1' : '#0f172a',
+                    backgroundColor: active ? '#0369a1' : '#f1f5f9',
+                    color: active ? '#ffffff' : '#64748b',
                     padding: '1px 6px',
                     borderRadius: '10px',
-                    fontSize: '11px'
+                    fontSize: '11px',
+                    fontWeight: 700
                   }}
                 >
                   {count}
@@ -383,72 +371,100 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
         {filteredTemplates.map((tpl) => (
           <div
             key={tpl.id}
-            className="app-catalog-card"
+            className="app-card-item"
             style={{
-              backgroundColor: '#1e293b',
-              border: '1px solid #334155',
-              borderRadius: '12px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
               padding: '1.25rem',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              transition: 'transform 0.2s, border-color 0.2s',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.3)'
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              transition: 'all 0.2s ease',
+              position: 'relative'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = '#0284c7';
+              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
             }}
           >
             <div>
-              <div className="flex items-start justify-between mb-3">
+              {/* Top Row: Icon + Badge + Version */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div
                   style={{
                     width: '46px',
                     height: '46px',
                     borderRadius: '10px',
-                    backgroundColor: '#0f172a',
-                    border: '1px solid #334155',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #f1f5f9'
                   }}
                 >
-                  {getTemplateIcon(tpl.icon)}
+                  <AppBrandIcon id={tpl.id} size={32} />
                 </div>
-                <div className="flex flex-col items-end gap-1">
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {tpl.badge && (
                     <span
                       style={{
-                        fontSize: '10px',
+                        fontSize: '11px',
                         fontWeight: 700,
-                        textTransform: 'uppercase',
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        backgroundColor: tpl.badge === 'Most Popular' || tpl.badge === 'Top Store' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(2, 132, 199, 0.2)',
-                        color: tpl.badge === 'Most Popular' || tpl.badge === 'Top Store' ? '#f87171' : '#38bdf8',
-                        border: tpl.badge === 'Most Popular' || tpl.badge === 'Top Store' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(2, 132, 199, 0.4)'
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        ...getBadgeStyle(tpl.badge)
                       }}
                     >
                       {tpl.badge}
                     </span>
                   )}
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>v{tpl.version}</span>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                    v{tpl.version}
+                  </span>
                 </div>
               </div>
 
-              <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+              {/* Title & Category */}
+              <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
                 {tpl.name}
               </h3>
-              <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600, marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
                 {tpl.category}
               </div>
 
-              <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
+              {/* Description */}
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b', lineHeight: 1.5, minHeight: '38px' }}>
                 {tpl.description}
               </p>
             </div>
 
-            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '11px', color: '#64748b' }}>
-                {tpl.portsRequired ? `Service (${tpl.defaultPort})` : 'PHP / MySQL'}
-              </span>
+            {/* Bottom Row: Rating/Type + Install Button */}
+            <div
+              style={{
+                marginTop: '1.25rem',
+                paddingTop: '1rem',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Star size={13} fill="#f59e0b" color="#f59e0b" />
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>4.9</span>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>&bull; {tpl.portsRequired ? 'Service' : 'PHP'}</span>
+              </div>
+
               <button
                 className="btn btn-primary-sm"
                 onClick={() => handleOpenInstall(tpl)}
@@ -456,13 +472,14 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '6px 14px',
+                  padding: '7px 14px',
                   fontSize: '12px',
                   fontWeight: 600,
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  cursor: 'pointer'
                 }}
               >
-                <span>Install Now</span>
+                <span>Install</span>
                 <ArrowRight size={13} />
               </button>
             </div>
@@ -478,7 +495,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.65)',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -493,10 +510,10 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
             style={{
               width: '100%',
               maxWidth: '560px',
-              backgroundColor: '#1e293b',
-              border: '1px solid #334155',
-              borderRadius: '14px',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '12px',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
               overflow: 'hidden'
             }}
           >
@@ -508,29 +525,31 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '16px 20px',
-                borderBottom: '1px solid #334155',
-                backgroundColor: '#0f172a'
+                borderBottom: '1px solid #e2e8f0',
+                backgroundColor: '#f8fafc'
               }}
             >
-              <div className="flex items-center gap-3">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
-                    width: '36px',
-                    height: '36px',
+                    width: '40px',
+                    height: '40px',
                     borderRadius: '8px',
-                    backgroundColor: '#1e293b',
+                    backgroundColor: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    border: '1px solid #e2e8f0'
                   }}
                 >
-                  {getTemplateIcon(selectedTemplate.icon)}
+                  <AppBrandIcon id={selectedTemplate.id} size={28} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
                     Install {selectedTemplate.name}
                   </h3>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>
                     {selectedTemplate.category} &bull; v{selectedTemplate.version}
                   </span>
                 </div>
@@ -538,7 +557,7 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
               <button
                 className="modal-close-btn"
                 onClick={() => setSelectedTemplate(null)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={18} />
               </button>
@@ -547,22 +566,23 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
             {/* Modal Form */}
             <form onSubmit={handleInstallApp}>
               <div className="modal-body" style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
-                <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
-                  Configure domain routing and administrative credentials for <strong>{selectedTemplate.name}</strong>. A dedicated MySQL database schema will be provisioned automatically.
+                <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: '#64748b', lineHeight: 1.5 }}>
+                  Configure installation settings for <strong>{selectedTemplate.name}</strong>. A dedicated MySQL database schema will be provisioned automatically.
                 </p>
 
                 {/* Domain Selector */}
-                <div className="form-group mb-3">
-                  <label className="form-label font-semibold text-xs text-slate-300 block mb-1">
-                    Select Installation Domain *
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+                    Installation Domain *
                   </label>
                   <select
-                    className="form-select w-full"
+                    className="form-select"
                     value={domainName}
                     onChange={(e) => {
                       setDomainName(e.target.value);
                       setAdminEmail(`admin@${e.target.value}`);
                     }}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
                     required
                   >
                     {domains.map((d) => (
@@ -577,98 +597,105 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                 </div>
 
                 {/* Site Title */}
-                <div className="form-group mb-3">
-                  <label className="form-label font-semibold text-xs text-slate-300 block mb-1">
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
                     Website / Store Title
                   </label>
                   <input
                     type="text"
-                    className="form-input w-full"
+                    className="form-input"
                     value={siteTitle}
                     onChange={(e) => setSiteTitle(e.target.value)}
                     placeholder={`e.g. My ${selectedTemplate.name} Platform`}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
                     required
                   />
                 </div>
 
                 {/* Project Slug */}
-                <div className="form-group mb-3">
-                  <label className="form-label font-semibold text-xs text-slate-300 block mb-1">
-                    Project / Directory Identifier
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+                    Directory Identifier
                   </label>
                   <input
                     type="text"
-                    className="form-input w-full"
+                    className="form-input"
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder="e.g. my_wordpress_blog"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
                     required
                   />
                 </div>
 
                 {/* Admin Credentials */}
-                <div className="grid grid-cols-2 gap-3 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
                   <div>
-                    <label className="form-label font-semibold text-xs text-slate-300 block mb-1">
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
                       Admin Username
                     </label>
                     <input
                       type="text"
-                      className="form-input w-full"
+                      className="form-input"
                       value={adminUser}
                       onChange={(e) => setAdminUser(e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box' }}
                       required
                     />
                   </div>
                   <div>
-                    <label className="form-label font-semibold text-xs text-slate-300 block mb-1">
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
                       Admin Password
                     </label>
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      className="form-input w-full"
+                      className="form-input"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box' }}
                       required
                     />
                   </div>
                 </div>
 
-                <div className="form-group mb-3">
-                  <label className="form-label font-semibold text-xs text-slate-300 block mb-1">
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
                     Admin Email
                   </label>
                   <input
                     type="email"
-                    className="form-input w-full"
+                    className="form-input"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
                     required
                   />
                 </div>
 
                 {/* Service Port if required */}
                 {selectedTemplate.portsRequired && (
-                  <div className="form-group mb-3">
-                    <label className="form-label font-semibold text-xs text-slate-300 block mb-1">
-                      Background Process Port
+                  <div className="form-group" style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+                      Service Port
                     </label>
                     <input
                       type="number"
-                      className="form-input w-full"
+                      className="form-input"
                       value={port}
                       onChange={(e) => setPort(e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box' }}
                       required
                     />
                   </div>
                 )}
 
-                <div className="flex items-center justify-between text-xs text-muted mt-2">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}>
                     <input
                       type="checkbox"
                       checked={showPassword}
                       onChange={(e) => setShowPassword(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
                     />
                     <span>Show Password</span>
                   </label>
@@ -681,8 +708,8 @@ export default function AppInstallerSection({ setActiveTab, reloadDomains, domai
                 className="modal-footer"
                 style={{
                   padding: '14px 20px',
-                  borderTop: '1px solid #334155',
-                  backgroundColor: '#0f172a',
+                  borderTop: '1px solid #e2e8f0',
+                  backgroundColor: '#f8fafc',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
