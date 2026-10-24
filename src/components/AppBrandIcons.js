@@ -144,6 +144,17 @@ export default function AppBrandIcon({ id, size = 32 }) {
         </svg>
       );
 
+    case 'java_app':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="5" fill="#5382A1" />
+          <path d="M10.5 4c-.5 1.5.5 2.5 1.5 3.5-1-1-1.5-2-1.5-3.5zm3 0c-.5 1.5.5 2.5 1.5 3.5-1-1-1.5-2-1.5-3.5z" stroke="#E76F00" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M7 10h10v5c0 2-1.5 3.5-3.5 3.5h-3C8.5 18.5 7 17 7 15v-5zm10 1.5h1.5c1 0 1.5.5 1.5 1.5s-.5 1.5-1.5 1.5H17v-3z" fill="#ffffff" />
+          <path d="M5.5 20c3 1 10 1 13 0" stroke="#E76F00" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'springboot_app':
     case 'java_springboot':
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">

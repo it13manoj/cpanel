@@ -29,7 +29,9 @@ import {
   Server,
   CheckCircle,
   AlertCircle,
-  X
+  X,
+  Coffee,
+  Zap
 } from 'lucide-react';
 import { api } from '../api';
 
@@ -120,8 +122,10 @@ export default function CPanelClassicLayout({
       items: [
         { id: 'installer', name: '1-Click App Installer', desc: 'WordPress, WooCommerce, Laravel & 36+ Apps', icon: Rocket, color: 'bg-blue' },
         { id: 'apps', name: 'Node.js App Manager', desc: 'Deploy & monitor background processes', icon: Cpu, color: 'bg-green' },
+        { id: 'installer', name: 'Setup Java Application', desc: 'Deploy Java Web & Tomcat applications', icon: Coffee, color: 'bg-orange' },
+        { id: 'installer', name: 'Spring Boot REST API', desc: 'Enterprise Spring Boot microservices', icon: Zap, color: 'bg-teal' },
         { id: 'installer', name: 'WordPress & CMS', desc: 'WordPress, Joomla, Drupal, Ghost, PrestaShop', icon: FileCode, color: 'bg-indigo' },
-        { id: 'installer', name: 'App Catalog (36 Apps)', desc: 'CMS, E-Commerce, Forums, Frameworks & DevOps', icon: Archive, color: 'bg-amber' }
+        { id: 'installer', name: 'App Catalog (37 Apps)', desc: 'CMS, E-Commerce, Forums, Frameworks & DevOps', icon: Archive, color: 'bg-amber' }
       ]
     },
     {

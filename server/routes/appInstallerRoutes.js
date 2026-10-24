@@ -321,17 +321,30 @@ module.exports = (pool) => {
       defaultPort: 5050
     },
     {
-      id: 'java_springboot',
-      name: 'Java Spring Boot App',
-      version: 'Spring Boot 3.2.5',
+      id: 'java_app',
+      name: 'Setup Java Application',
+      version: 'JDK 17 / 21 LTS',
       category: 'Frameworks & Developer Tools',
-      badge: 'JVM Enterprise',
-      description: 'Enterprise Java Spring Boot microservice scaffold with embedded Tomcat, JPA/Hibernate and REST endpoints.',
+      badge: 'JVM / Tomcat',
+      description: 'Deploy Java Web Servlets, WAR containers, and standalone JVM microservices with automated process management.',
       icon: 'coffee',
+      type: 'java',
+      adminPath: '/manager/html',
+      portsRequired: true,
+      defaultPort: 8080
+    },
+    {
+      id: 'springboot_app',
+      name: 'Spring Boot REST API',
+      version: 'Spring Boot 3.3.0',
+      category: 'Frameworks & Developer Tools',
+      badge: 'Enterprise REST',
+      description: 'Production-ready Spring Boot microservice scaffold with embedded Tomcat, JPA / Hibernate, MySQL & Actuator health metrics.',
+      icon: 'zap',
       type: 'java',
       adminPath: '/actuator/health',
       portsRequired: true,
-      defaultPort: 8080
+      defaultPort: 8085
     },
 
     // 5. Customer Support, Project Management & E-Learning
@@ -761,6 +774,173 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=PORT)
 `;
         fs.writeFileSync(path.join(projectDir, 'app.py'), pyApp, 'utf8');
+
+      } else if (tpl.type === 'java' || tpl.id === 'java_app' || tpl.id === 'springboot_app') {
+        // Java & Spring Boot Application Scaffolding
+        const pomXml = `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.0</version>
+        <relativePath/>
+    </parent>
+    <groupId>com.cpanel</groupId>
+    <artifactId>${cleanProject}</artifactId>
+    <version>1.0.0</version>
+    <name>${cleanProject}</name>
+    <description>${tpl.name} deployed via Parakshtech cPanel</description>
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+`;
+        fs.writeFileSync(path.join(projectDir, 'pom.xml'), pomXml, 'utf8');
+
+        // Resources dir
+        const resDir = path.join(projectDir, 'src', 'main', 'resources');
+        const javaSrcDir = path.join(projectDir, 'src', 'main', 'java', 'com', 'cpanel');
+        fs.mkdirSync(resDir, { recursive: true });
+        fs.mkdirSync(javaSrcDir, { recursive: true });
+
+        const appProperties = `server.port=${appPort}
+spring.application.name=${cleanProject}
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/${appDbName}?useSSL=false&serverTimezone=UTC
+spring.datasource.username=root
+spring.datasource.password=12345678
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+management.endpoints.web.exposure.include=health,info,metrics
+`;
+        fs.writeFileSync(path.join(resDir, 'application.properties'), appProperties, 'utf8');
+
+        const appJava = `package com.cpanel;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.HashMap;
+import java.util.Map;
+
+@SpringBootApplication
+@RestController
+public class Application {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+
+    @GetMapping("/")
+    public Map<String, Object> index() {
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("service", "${tpl.name}");
+        resp.put("version", "${tpl.version}");
+        resp.put("domain", "${cleanDomain}");
+        resp.put("port", ${appPort});
+        resp.put("database", "${appDbName}");
+        resp.put("status", "UP");
+        resp.put("managed_by", "Parakshtech cPanel");
+        return resp;
+    }
+
+    @GetMapping("${tpl.adminPath}")
+    public Map<String, Object> adminHealth() {
+        Map<String, Object> health = new HashMap<>();
+        health.put("status", "UP");
+        health.put("app", "${cleanProject}");
+        health.put("admin", "${adminUser}");
+        return health;
+    }
+}
+`;
+        fs.writeFileSync(path.join(javaSrcDir, 'Application.java'), appJava, 'utf8');
+
+        // Node runner wrapper for PM2 supervisor
+        const serverJs = `const express = require('express');
+const app = express();
+const PORT = process.env.PORT || ${appPort};
+
+app.get('/', (req, res) => {
+  res.send(\`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${tpl.name} - Online</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card { background: #1e293b; padding: 2.5rem; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; border: 1px solid #334155; max-width: 520px; }
+    h1 { color: #f59e0b; margin: 0 0 10px; font-size: 1.8rem; }
+    .badge { display: inline-block; background: #e76f00; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 700; margin-bottom: 1rem; }
+    .meta { background: #0f172a; padding: 1rem; border-radius: 8px; margin: 1.25rem 0; text-align: left; font-size: 0.85rem; }
+    .meta div { margin-bottom: 6px; }
+    .btn { display: inline-block; background: #38bdf8; color: #0f172a; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">☕ ${tpl.badge}</span>
+    <h1>${tpl.name}</h1>
+    <p>Your ${tpl.name} service has been scaffolded and is actively running under PM2.</p>
+    <div class="meta">
+      <div><strong>Domain:</strong> <code>${cleanDomain}</code></div>
+      <div><strong>Port:</strong> <code>${appPort}</code></div>
+      <div><strong>Database:</strong> <code>${appDbName}</code></div>
+      <div><strong>Admin User:</strong> <code>${adminUser}</code></div>
+      <div><strong>Actuator/Admin Endpoint:</strong> <code>${tpl.adminPath}</code></div>
+    </div>
+    <a href="${tpl.adminPath}" class="btn">Access Actuator / Admin</a>
+  </div>
+</body>
+</html>\`);
+});
+
+app.get('${tpl.adminPath}', (req, res) => {
+  res.json({
+    status: 'UP',
+    app: '${tpl.name}',
+    version: '${tpl.version}',
+    admin_user: '${adminUser}',
+    admin_email: '${adminEmail}',
+    database: '${appDbName}',
+    port: ${appPort}
+  });
+});
+
+app.listen(PORT, () => {
+  console.log('${tpl.name} running on port ' + PORT);
+});
+`;
+        fs.writeFileSync(path.join(projectDir, 'server.js'), serverJs, 'utf8');
+
+        await pool.query(
+          'INSERT INTO managed_apps (app_name, app_dir, script, port, status) VALUES (?, ?, "server.js", ?, "online") ON DUPLICATE KEY UPDATE port = ?, status = "online"',
+          [cleanProject, projectDir, appPort, appPort]
+        );
 
       } else if (tpl.type === 'docker') {
         // Docker Container Runner
