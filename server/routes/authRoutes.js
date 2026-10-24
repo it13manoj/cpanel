@@ -109,6 +109,40 @@ module.exports = (pool) => {
     }
   });
 
+  // Change password for a user
+  router.post('/change-password', async (req, res) => {
+    try {
+      const { username, current_password, new_password } = req.body;
+      if (!username || !new_password) {
+        return res.status(400).json({ success: false, error: 'Username and new password are required' });
+      }
+
+      if (new_password.length < 5) {
+        return res.status(400).json({ success: false, error: 'New password must be at least 5 characters long' });
+      }
+
+      const [user] = await pool.query('SELECT id, username, password FROM panel_users WHERE username = ?', [username.trim()]);
+      if (user.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      if (current_password && user[0].password !== current_password.trim()) {
+        return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+      }
+
+      await pool.query('UPDATE panel_users SET password = ? WHERE id = ?', [new_password.trim(), user[0].id]);
+
+      await pool.query(
+        'INSERT INTO activity_logs (module, action, details) VALUES (?, ?, ?)',
+        ['AUTH', `Password changed for user: ${user[0].username}`, `User ID: ${user[0].id}`]
+      );
+
+      res.json({ success: true, message: 'Password updated successfully!' });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   return router;
 };
 

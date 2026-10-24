@@ -34,6 +34,7 @@ export const api = {
   getPanelUsers: () => fetchJSON('/auth/users'),
   createPanelUser: (data) => fetchJSON('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
   deletePanelUser: (id) => fetchJSON(`/auth/users/${id}`, { method: 'DELETE' }),
+  changePassword: (data) => fetchJSON('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
 
   // 1-Click App Installer
   getTemplates: () => fetchJSON('/installer/templates'),

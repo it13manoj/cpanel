@@ -26,8 +26,12 @@ import {
   FileCode,
   Archive,
   RefreshCw,
-  Server
+  Server,
+  CheckCircle,
+  AlertCircle,
+  X
 } from 'lucide-react';
+import { api } from '../api';
 
 export default function CPanelClassicLayout({
   currentUser,
@@ -40,6 +44,54 @@ export default function CPanelClassicLayout({
 }) {
   const [filterText, setFilterText] = useState('');
   const [collapsedSections, setCollapsedSections] = useState({});
+
+  // Admin Profile Dropdown & Password Modal
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(null);
+  const [passwordError, setPasswordError] = useState(null);
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!newPassword || newPassword.length < 5) {
+      setPasswordError('New password must be at least 5 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      await api.changePassword({
+        username: currentUser?.username || 'admin',
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      setPasswordSuccess('Password successfully updated!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setPasswordModalOpen(false);
+        setPasswordSuccess(null);
+      }, 1500);
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to update password.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   const serverIp = metrics?.serverIp || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? window.location.hostname : '173.212.235.87');
   const primaryDomain = domains?.[0]?.domain_name || currentUser?.allocated_domain || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? window.location.hostname : 'gaurishankartemple.com');
@@ -151,12 +203,115 @@ export default function CPanelClassicLayout({
         </div>
 
         {/* Right user menu & logout */}
-        <div className="header-user-menu">
-          <div className="user-pill-dropdown">
-            <User size={15} />
+        <div className="header-user-menu" style={{ position: 'relative' }}>
+          <div
+            className="user-pill-dropdown"
+            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+            style={{ userSelect: 'none', position: 'relative' }}
+          >
+            <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <User size={15} />
+            </div>
             <span className="user-name-text">{currentUser?.username || 'admin'}</span>
-            <ChevronDown size={13} />
+            <ChevronDown size={13} style={{ transform: userDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </div>
+
+          {/* User Profile Dropdown Menu */}
+          {userDropdownOpen && (
+            <div
+              className="cpanel-user-dropdown-menu"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: '75px',
+                width: '240px',
+                backgroundColor: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '8px',
+                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
+                zIndex: 9999,
+                overflow: 'hidden'
+              }}
+            >
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #334155', backgroundColor: '#0f172a' }}>
+                <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Signed in as</div>
+                <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '14px', marginTop: '2px' }}>{currentUser?.username || 'admin'}</div>
+                <div style={{ fontSize: '11px', color: '#38bdf8', marginTop: '2px' }}>Role: {currentUser?.role || 'Super Administrator'}</div>
+              </div>
+
+              <div style={{ padding: '6px 0' }}>
+                <div
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    setPasswordError(null);
+                    setPasswordSuccess(null);
+                    setPasswordModalOpen(true);
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    color: '#e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <KeyRound size={15} style={{ color: '#38bdf8' }} />
+                  <span>Change Password</span>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    setActiveTool('panel_users');
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    color: '#e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <User size={15} style={{ color: '#a855f7' }} />
+                  <span>User Accounts</span>
+                </div>
+
+                <div style={{ height: '1px', backgroundColor: '#334155', margin: '4px 0' }} />
+
+                <div
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    onLogout();
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    color: '#f87171',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <LogOut size={15} style={{ color: '#f87171' }} />
+                  <span>Log Out</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="header-bell-wrap" title="System Notifications">
             <Bell size={16} />
@@ -377,6 +532,198 @@ export default function CPanelClassicLayout({
           </div>
         )}
       </div>
+
+      {/* Change Password Modal */}
+      {passwordModalOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setPasswordModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            backdropFilter: 'blur(2px)'
+          }}
+        >
+          <div
+            className="modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '440px',
+              backgroundColor: '#1e293b',
+              border: '1px solid #334155',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.6)',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              className="modal-header"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid #334155',
+                backgroundColor: '#0f172a'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <KeyRound size={18} style={{ color: '#38bdf8' }} />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#f8fafc' }}>Change Account Password</h3>
+              </div>
+              <button
+                className="modal-close-btn"
+                onClick={() => setPasswordModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePassword}>
+              <div className="modal-body" style={{ padding: '20px' }}>
+                <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#94a3b8' }}>
+                  Update password for account <strong style={{ color: '#f8fafc' }}>{currentUser?.username || 'admin'}</strong>.
+                </p>
+
+                {passwordSuccess && (
+                  <div
+                    className="alert alert-success"
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid #10b981',
+                      borderRadius: '6px',
+                      color: '#34d399',
+                      fontSize: '13px',
+                      marginBottom: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <CheckCircle size={16} />
+                    <span>{passwordSuccess}</span>
+                  </div>
+                )}
+
+                {passwordError && (
+                  <div
+                    className="alert alert-danger"
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid #ef4444',
+                      borderRadius: '6px',
+                      color: '#f87171',
+                      fontSize: '13px',
+                      marginBottom: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <AlertCircle size={16} />
+                    <span>{passwordError}</span>
+                  </div>
+                )}
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+                    Current Password
+                  </label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+                    New Password
+                  </label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 5 characters"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '16px' }}>
+                  <label className="form-label" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+                    Confirm New Password
+                  </label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-type new password"
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={showPassword}
+                      onChange={(e) => setShowPassword(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span>Show Passwords</span>
+                  </label>
+                  <span>Min 5 characters</span>
+                </div>
+              </div>
+
+              <div
+                className="modal-footer"
+                style={{
+                  padding: '12px 20px',
+                  borderTop: '1px solid #334155',
+                  backgroundColor: '#0f172a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '10px'
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setPasswordModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={passwordLoading}
+                >
+                  {passwordLoading ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
