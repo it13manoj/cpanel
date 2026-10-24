@@ -231,6 +231,52 @@ module.exports = (pool) => {
     }
   });
 
+  // Batch delete multiple files or folders
+  router.post('/delete-multiple', async (req, res) => {
+    try {
+      const { paths } = req.body;
+      if (!Array.isArray(paths) || paths.length === 0) {
+        return res.status(400).json({ success: false, error: 'Array of paths required' });
+      }
+
+      let deletedCount = 0;
+      const errors = [];
+
+      for (const itemPath of paths) {
+        try {
+          const resolved = resolveSafePath(itemPath);
+          if (fs.existsSync(resolved)) {
+            const stats = fs.statSync(resolved);
+            if (stats.isDirectory()) {
+              fs.rmSync(resolved, { recursive: true, force: true });
+            } else {
+              fs.unlinkSync(resolved);
+            }
+            deletedCount++;
+          }
+        } catch (itemErr) {
+          errors.push({ path: itemPath, error: itemErr.message });
+        }
+      }
+
+      if (pool) {
+        await pool.query(
+          'INSERT INTO activity_logs (module, action, details) VALUES (?, ?, ?)',
+          ['FILE_MANAGER', `Batch deleted ${deletedCount} item(s)`, `Requested: ${paths.length} items`]
+        );
+      }
+
+      res.json({
+        success: true,
+        deletedCount,
+        errors,
+        message: `Successfully deleted ${deletedCount} item(s)`
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Change permissions (chmod)
   router.post('/chmod', async (req, res) => {
     try {

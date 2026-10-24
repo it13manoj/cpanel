@@ -77,6 +77,7 @@ export const api = {
   createItem: (parentPath, name, type) => fetchJSON('/files/create', { method: 'POST', body: JSON.stringify({ parentPath, name, type }) }),
   renameItem: (oldPath, newName) => fetchJSON('/files/rename', { method: 'POST', body: JSON.stringify({ oldPath, newName }) }),
   deleteItem: (targetPath) => fetchJSON('/files/delete', { method: 'POST', body: JSON.stringify({ targetPath }) }),
+  deleteMultipleItems: (paths) => fetchJSON('/files/delete-multiple', { method: 'POST', body: JSON.stringify({ paths }) }),
   chmodItem: (targetPath, mode) => fetchJSON('/files/chmod', { method: 'POST', body: JSON.stringify({ targetPath, mode }) }),
   extractZip: (zipPath, extractTo) => fetchJSON('/files/extract', { method: 'POST', body: JSON.stringify({ zipPath, extractTo }) }),
   uploadFiles: async (formData) => {

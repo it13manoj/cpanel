@@ -19,7 +19,8 @@ import {
   X,
   CheckCircle,
   AlertCircle,
-  ShieldAlert
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { api } from '../api';
 
@@ -29,6 +30,12 @@ export default function FileManagerView({ initialPath }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+
+  // Multi-select state
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  // Drag and Drop state
+  const [isDragging, setIsDragging] = useState(false);
 
   // Editor Modal state
   const [editingFile, setEditingFile] = useState(null);
@@ -44,6 +51,7 @@ export default function FileManagerView({ initialPath }) {
 
   // Upload file input ref
   const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
 
   useEffect(() => {
     loadFiles(currentPath);
@@ -53,6 +61,7 @@ export default function FileManagerView({ initialPath }) {
     try {
       setLoading(true);
       setError(null);
+      setSelectedItems([]);
       const res = await api.listFiles(targetPath);
       setItems(res.items || []);
       setCurrentPath(res.currentPath || '');
@@ -73,6 +82,49 @@ export default function FileManagerView({ initialPath }) {
     const parts = currentPath.split('/').filter(Boolean);
     parts.pop();
     setCurrentPath(parts.join('/'));
+  };
+
+  // Selection handlers
+  const handleToggleSelectAll = () => {
+    if (selectedItems.length === items.length && items.length > 0) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(items.map((i) => i.name));
+    }
+  };
+
+  const handleToggleSelect = (name) => {
+    setSelectedItems((prev) =>
+      prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]
+    );
+  };
+
+  // Batch delete selected files & folders
+  const handleBatchDelete = async () => {
+    if (selectedItems.length === 0) return;
+    const count = selectedItems.length;
+    if (
+      window.confirm(
+        `Are you sure you want to permanently delete the ${count} selected item(s)?\n\nItems: ${selectedItems.join(
+          ', '
+        )}`
+      )
+    ) {
+      try {
+        setLoading(true);
+        const paths = selectedItems.map((name) =>
+          currentPath ? `${currentPath}/${name}` : name
+        );
+        const res = await api.deleteMultipleItems(paths);
+        setMessage(`Successfully deleted ${res.deletedCount || count} item(s).`);
+        setSelectedItems([]);
+        loadFiles(currentPath);
+      } catch (err) {
+        setError('Batch delete failed: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleOpenFile = async (item) => {
@@ -159,26 +211,60 @@ export default function FileManagerView({ initialPath }) {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Upload handler (regular & drag-drop)
+  const processUploadFiles = async (fileList) => {
+    if (!fileList || fileList.length === 0) return;
 
     const formData = new FormData();
     formData.append('destination', currentPath);
-    for (let i = 0; i < files.length; i++) {
-      formData.append('files', files[i]);
+    for (let i = 0; i < fileList.length; i++) {
+      formData.append('files', fileList[i]);
     }
 
     try {
       setLoading(true);
       await api.uploadFiles(formData);
-      setMessage(`Uploaded ${files.length} file(s) successfully.`);
+      setMessage(`Uploaded ${fileList.length} file(s) successfully.`);
       loadFiles(currentPath);
     } catch (err) {
       setError('Upload failed: ' + err.message);
     } finally {
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (folderInputRef.current) folderInputRef.current.value = '';
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    processUploadFiles(e.target.files);
+  };
+
+  // Drag & Drop event handlers
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processUploadFiles(e.dataTransfer.files);
     }
   };
 
@@ -207,12 +293,18 @@ export default function FileManagerView({ initialPath }) {
   const breadcrumbs = currentPath.split('/').filter(Boolean);
 
   return (
-    <div className="view-container">
+    <div
+      className="view-container"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="view-header">
         <div>
           <h1 className="view-title">Web File Manager & Code Editor</h1>
           <p className="view-subtitle">
-            Manage your project directories, edit server scripts, upload archives and adjust file permissions.
+            Manage project files, drag & drop codebases to upload, batch select folders, and adjust permissions.
           </p>
         </div>
 
@@ -228,7 +320,7 @@ export default function FileManagerView({ initialPath }) {
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => fileInputRef.current?.click()}>
             <Upload size={14} />
-            <span>Upload File</span>
+            <span>Upload Files</span>
           </button>
           <input
             type="file"
@@ -242,6 +334,51 @@ export default function FileManagerView({ initialPath }) {
           </button>
         </div>
       </div>
+
+      {/* Drag & Drop Upload Zone */}
+      <div
+        className={`drag-drop-zone ${isDragging ? 'active-drag' : ''}`}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <Upload size={24} style={{ color: isDragging ? '#0284c7' : '#64748b' }} />
+        <p>
+          {isDragging
+            ? 'Drop your files or zip archive here to upload immediately!'
+            : 'Drag & Drop files or website archives (.zip, .html, .js) anywhere here to upload'}
+        </p>
+        <span className="subtext">
+          Target folder: <code>/{currentPath || 'root'}</code> (Click to browse files)
+        </span>
+      </div>
+
+      {/* Batch Selection Action Bar */}
+      {selectedItems.length > 0 && (
+        <div className="bulk-action-bar">
+          <div className="flex items-center gap-2">
+            <CheckSquare size={16} className="text-primary" />
+            <span style={{ fontWeight: 600 }}>
+              {selectedItems.length} of {items.length} item(s) selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn btn-secondary-sm"
+              onClick={() => setSelectedItems([])}
+            >
+              Deselect All
+            </button>
+            <button
+              className="btn-icon-danger"
+              style={{ width: 'auto', padding: '0.35rem 0.75rem', gap: '0.35rem', display: 'inline-flex' }}
+              onClick={handleBatchDelete}
+              title="Delete all selected files and folders"
+            >
+              <Trash2 size={14} />
+              <span>Delete Selected ({selectedItems.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {message && (
         <div className="alert alert-success">
@@ -283,13 +420,22 @@ export default function FileManagerView({ initialPath }) {
         </div>
       </div>
 
-      {/* File List Table */}
+      {/* File List Table with Multi-Select Checkboxes */}
       <div className="content-card">
         <div className="card-body p-0">
           <div className="table-responsive">
             <table className="cpanel-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      className="cpanel-checkbox"
+                      title="Select / Deselect All"
+                      checked={items.length > 0 && selectedItems.length === items.length}
+                      onChange={handleToggleSelectAll}
+                    />
+                  </th>
                   <th>Name</th>
                   <th>Size</th>
                   <th>Permissions</th>
@@ -300,83 +446,102 @@ export default function FileManagerView({ initialPath }) {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-muted">
-                      Folder is empty. Upload or create files using the buttons above.
+                    <td colSpan={6} className="text-center py-8 text-muted">
+                      Folder is empty. Upload or drop files using the zone above.
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => (
-                    <tr key={item.name} className="hover:bg-slate-800">
-                      <td>
-                        <div
-                          className="file-item-name"
-                          onClick={() => (item.isDirectory ? handleNavigate(item.name) : handleOpenFile(item))}
-                        >
-                          {getFileIcon(item)}
-                          <span className={item.isDirectory ? 'folder-link' : 'file-link'}>{item.name}</span>
-                        </div>
-                      </td>
-                      <td>{formatSize(item.size)}</td>
-                      <td>
-                        <span
-                          className="chmod-badge"
-                          title="Click to edit permissions"
-                          onClick={() => setChmodModal({
-                            open: true,
-                            path: currentPath ? `${currentPath}/${item.name}` : item.name,
-                            mode: item.permissions || '0755'
-                          })}
-                        >
-                          <Key size={12} />
-                          {item.permissions || '0755'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="text-xs text-muted">
-                          {new Date(item.mtime).toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="text-right">
-                        <div className="action-buttons-inline">
-                          {!item.isDirectory && (
-                            <>
-                              <button
-                                className="btn-icon-sm"
-                                title="Edit in Code Editor"
-                                onClick={() => handleOpenFile(item)}
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <a
-                                href={`/api/files/download?path=${encodeURIComponent(currentPath ? `${currentPath}/${item.name}` : item.name)}`}
-                                className="btn-icon-sm"
-                                title="Download File"
-                                download
-                              >
-                                <Download size={14} />
-                              </a>
-                            </>
-                          )}
-                          {item.extension === '.zip' && (
-                            <button
-                              className="btn-icon-sm text-emerald"
-                              title="Extract Zip Archive"
-                              onClick={() => handleExtractZip(item)}
-                            >
-                              <Archive size={14} />
-                            </button>
-                          )}
-                          <button
-                            className="btn-icon-danger"
-                            title="Delete"
-                            onClick={() => handleDelete(item)}
+                  items.map((item) => {
+                    const isChecked = selectedItems.includes(item.name);
+                    return (
+                      <tr
+                        key={item.name}
+                        className={isChecked ? 'bg-sky-50' : ''}
+                        style={isChecked ? { backgroundColor: '#f0f9ff' } : {}}
+                      >
+                        <td style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            className="cpanel-checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelect(item.name)}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            className="file-item-name"
+                            onClick={() => (item.isDirectory ? handleNavigate(item.name) : handleOpenFile(item))}
                           >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {getFileIcon(item)}
+                            <span className={item.isDirectory ? 'folder-link' : 'file-link'}>{item.name}</span>
+                          </div>
+                        </td>
+                        <td>{formatSize(item.size)}</td>
+                        <td>
+                          <span
+                            className="chmod-badge"
+                            title="Click to edit permissions"
+                            onClick={() =>
+                              setChmodModal({
+                                open: true,
+                                path: currentPath ? `${currentPath}/${item.name}` : item.name,
+                                mode: item.permissions || '0755'
+                              })
+                            }
+                          >
+                            <Key size={12} />
+                            {item.permissions || '0755'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="text-xs text-muted">
+                            {new Date(item.mtime).toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          <div className="action-buttons-inline">
+                            {!item.isDirectory && (
+                              <>
+                                <button
+                                  className="btn-icon-sm"
+                                  title="Edit in Code Editor"
+                                  onClick={() => handleOpenFile(item)}
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <a
+                                  href={`/api/files/download?path=${encodeURIComponent(
+                                    currentPath ? `${currentPath}/${item.name}` : item.name
+                                  )}`}
+                                  className="btn-icon-sm"
+                                  title="Download File"
+                                  download
+                                >
+                                  <Download size={14} />
+                                </a>
+                              </>
+                            )}
+                            {item.extension === '.zip' && (
+                              <button
+                                className="btn-icon-sm text-emerald"
+                                title="Extract Zip Archive"
+                                onClick={() => handleExtractZip(item)}
+                              >
+                                <Archive size={14} />
+                              </button>
+                            )}
+                            <button
+                              className="btn-icon-danger"
+                              title="Delete"
+                              onClick={() => handleDelete(item)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -488,4 +653,3 @@ export default function FileManagerView({ initialPath }) {
     </div>
   );
 }
-

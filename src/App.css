@@ -1806,3 +1806,155 @@ body {
   color: #fca5a5;
 }
 
+/* ==========================================================================
+   File Manager Drag & Drop & Batch Operations
+   ========================================================================== */
+.filemanager-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.drag-drop-zone {
+  border: 2px dashed #94a3b8;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.drag-drop-zone.active-drag {
+  border-color: #0284c7;
+  background-color: #e0f2fe;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+}
+
+.drag-drop-zone p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.drag-drop-zone span.subtext {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f1f5f9;
+  border: 1px solid var(--cpanel-border);
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.cpanel-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #0284c7;
+}
+
+.chmod-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chmod-badge:hover {
+  background-color: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.file-item-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.folder-link {
+  font-weight: 600;
+  color: #0284c7;
+}
+
+.folder-link:hover {
+  text-decoration: underline;
+}
+
+.file-link {
+  color: #334155;
+}
+
+.file-link:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
+.action-buttons-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.breadcrumbs-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.breadcrumb-path {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.crumb {
+  color: #0284c7;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.crumb:hover {
+  text-decoration: underline;
+}
+
+.crumb-active {
+  color: #0f172a;
+  cursor: default;
+}
+
+.crumb-active:hover {
+  text-decoration: none;
+}
+
+.crumb-separator {
+  color: #94a3b8;
+}
+
+
