@@ -2,6 +2,120 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const { exec, execSync } = require('child_process');
+
+function syncNginxVHost(dom) {
+  try {
+    const domainName = dom.domain_name;
+    const docRoot = path.resolve(dom.doc_root);
+    const sslCert = `/etc/letsencrypt/live/${domainName}/fullchain.pem`;
+    const sslKey = `/etc/letsencrypt/live/${domainName}/privkey.pem`;
+    const hasSSL = fs.existsSync(sslCert) && fs.existsSync(sslKey);
+
+    let config = '';
+    if (dom.proxy_type === 'proxy' && dom.proxy_port) {
+      config = `server {
+    listen 80;
+    server_name ${domainName} www.${domainName};
+${hasSSL ? `    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${domainName} www.${domainName};
+    ssl_certificate ${sslCert};
+    ssl_certificate_key ${sslKey};
+` : ''}
+    location / {
+        proxy_pass http://127.0.0.1:${dom.proxy_port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+`;
+    } else {
+      config = `server {
+    listen 80;
+    server_name ${domainName} www.${domainName};
+${hasSSL ? `    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${domainName} www.${domainName};
+    ssl_certificate ${sslCert};
+    ssl_certificate_key ${sslKey};
+    root ${docRoot};
+    index index.html index.htm default.html;
+
+    location / {
+        try_files $uri $uri/ /index.html =404;
+    }
+` : `
+    root ${docRoot};
+    index index.html index.htm default.html;
+
+    location / {
+        try_files $uri $uri/ /index.html =404;
+    }
+`}
+}
+`;
+    }
+
+    // Write to sites-available / sites-enabled if directory exists
+    const sitesAvail = '/etc/nginx/sites-available';
+    const sitesEnabled = '/etc/nginx/sites-enabled';
+    if (fs.existsSync(sitesAvail)) {
+      fs.writeFileSync(path.join(sitesAvail, domainName), config, 'utf8');
+      if (fs.existsSync(sitesEnabled)) {
+        const symlink = path.join(sitesEnabled, domainName);
+        if (!fs.existsSync(symlink)) {
+          try { fs.symlinkSync(path.join(sitesAvail, domainName), symlink); } catch (e) {}
+        }
+      }
+    } else if (fs.existsSync('/etc/nginx/conf.d')) {
+      fs.writeFileSync(`/etc/nginx/conf.d/${domainName}.conf`, config, 'utf8');
+    }
+
+    // Reload Nginx safely
+    try {
+      execSync('nginx -t && (systemctl reload nginx || nginx -s reload 2>/dev/null)', { stdio: 'ignore' });
+    } catch (e) {}
+
+    // If certbot is available and domain doesn't have SSL yet, automatically request SSL
+    if (!hasSSL) {
+      exec(`which certbot && certbot --nginx -d ${domainName} -d www.${domainName} --non-interactive --agree-tos --register-unsafely-without-email --redirect`, (err) => {
+        if (!err) {
+          try { execSync('systemctl reload nginx 2>/dev/null || nginx -s reload 2>/dev/null', { stdio: 'ignore' }); } catch (e) {}
+        }
+      });
+    }
+  } catch (err) {
+    console.warn(`[NginxSync] Notice for domain ${dom.domain_name}:`, err.message);
+  }
+}
+
+function removeNginxVHost(domainName) {
+  try {
+    const sitesAvailFile = `/etc/nginx/sites-available/${domainName}`;
+    const sitesEnabledFile = `/etc/nginx/sites-enabled/${domainName}`;
+    const confFile = `/etc/nginx/conf.d/${domainName}.conf`;
+
+    if (fs.existsSync(sitesEnabledFile)) fs.unlinkSync(sitesEnabledFile);
+    if (fs.existsSync(sitesAvailFile)) fs.unlinkSync(sitesAvailFile);
+    if (fs.existsSync(confFile)) fs.unlinkSync(confFile);
+
+    try {
+      execSync('nginx -t && (systemctl reload nginx || nginx -s reload 2>/dev/null)', { stdio: 'ignore' });
+    } catch (e) {}
+  } catch (err) {}
+}
 
 module.exports = (pool) => {
   const hostingRoot = path.resolve(__dirname, '../../hosting_data/www');
@@ -36,6 +150,9 @@ module.exports = (pool) => {
           if (!fs.existsSync(docConfigFile)) {
             fs.writeFileSync(docConfigFile, JSON.stringify(domConfig, null, 2), 'utf8');
           }
+
+          // Auto-sync domain with Nginx
+          syncNginxVHost(dom);
         } catch (e) {}
       }
 
@@ -131,6 +248,9 @@ module.exports = (pool) => {
         ['DOMAINS', `Allocated domain ${domain_name}`, `DocRoot: ${doc_root}, Type: ${proxy_type}`]
       );
 
+      // Automatically configure and reload Nginx for this domain
+      syncNginxVHost({ domain_name, doc_root, proxy_type, proxy_port });
+
       res.json({
         success: true,
         message: `Domain ${domain_name} allocated successfully!`,
@@ -182,6 +302,9 @@ module.exports = (pool) => {
         'INSERT INTO activity_logs (module, action, details) VALUES (?, ?, ?)',
         ['DOMAINS', `Removed domain ${rows[0].domain_name}`, `DocRoot preserved at: ${rows[0].doc_root}`]
       );
+
+      // Remove Nginx configuration and reload
+      removeNginxVHost(rows[0].domain_name);
 
       res.json({ success: true, message: `Domain ${rows[0].domain_name} deleted.` });
     } catch (err) {
