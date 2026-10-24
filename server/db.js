@@ -112,7 +112,7 @@ async function initDB() {
         \`action\` VARCHAR(255) NOT NULL,
         \`status\` VARCHAR(50) DEFAULT 'success',
         \`details\` TEXT NULL,
-        \`ip_address\` VARCHAR(50) DEFAULT '127.0.0.1',
+        \`ip_address\` VARCHAR(50) DEFAULT '173.212.235.87',
         \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
 

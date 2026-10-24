@@ -2,12 +2,34 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const https = require('https');
 const { exec, execSync } = require('child_process');
+
+let cachedServerIp = null;
+function getPublicServerIP() {
+  if (cachedServerIp) return cachedServerIp;
+  if (process.env.SERVER_IP) {
+    cachedServerIp = process.env.SERVER_IP;
+    return cachedServerIp;
+  }
+  const interfaces = os.networkInterfaces();
+  for (const iface of Object.values(interfaces)) {
+    for (const config of iface) {
+      if (config.family === 'IPv4' && !config.internal && !config.address.startsWith('127.')) {
+        cachedServerIp = config.address;
+        return cachedServerIp;
+      }
+    }
+  }
+  return '173.212.235.87';
+}
 
 function syncNginxVHost(dom) {
   try {
     const domainName = dom.domain_name;
     const docRoot = path.resolve(dom.doc_root);
+    const serverIp = getPublicServerIP();
     const sslCert = `/etc/letsencrypt/live/${domainName}/fullchain.pem`;
     const sslKey = `/etc/letsencrypt/live/${domainName}/privkey.pem`;
     const hasSSL = fs.existsSync(sslCert) && fs.existsSync(sslKey);
@@ -27,7 +49,7 @@ server {
     ssl_certificate_key ${sslKey};
 ` : ''}
     location / {
-        proxy_pass http://127.0.0.1:${dom.proxy_port};
+        proxy_pass http://${serverIp}:${dom.proxy_port};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -194,9 +216,12 @@ module.exports = (pool) => {
       const vhostDir = path.resolve(__dirname, '../../hosting_data/vhosts');
       if (!fs.existsSync(vhostDir)) fs.mkdirSync(vhostDir, { recursive: true });
 
+      const serverIp = getPublicServerIP();
+
       const domainConfig = {
         domain_name,
         doc_root,
+        server_ip: serverIp,
         proxy_type,
         proxy_port: proxy_port || null,
         created_at: new Date().toISOString(),
@@ -241,6 +266,25 @@ module.exports = (pool) => {
         'INSERT INTO domains (domain_name, doc_root, proxy_type, proxy_port, ssl_enabled, status) VALUES (?, ?, ?, ?, 0, "active")',
         [domain_name, doc_root, proxy_type, proxy_port || null]
       );
+
+      // Auto-populate DNS records with Public Server IP
+      try {
+        const defaultRecords = [
+          { type: 'A', name: `${domain_name}.`, ttl: 14400, value: serverIp },
+          { type: 'A', name: `mail.${domain_name}.`, ttl: 14400, value: serverIp },
+          { type: 'CNAME', name: `www.${domain_name}.`, ttl: 14400, value: `${domain_name}.` },
+          { type: 'NS', name: `${domain_name}.`, ttl: 86400, value: `ns1.${domain_name}.` },
+          { type: 'NS', name: `${domain_name}.`, ttl: 86400, value: `ns2.${domain_name}.` },
+          { type: 'A', name: `ns1.${domain_name}.`, ttl: 14400, value: serverIp },
+          { type: 'A', name: `ns2.${domain_name}.`, ttl: 14400, value: serverIp }
+        ];
+        for (const rec of defaultRecords) {
+          await pool.query(
+            'INSERT INTO `cpanel`.`dns_records` (domain_id, domain_name, record_type, name, ttl, value) VALUES (?, ?, ?, ?, ?, ?)',
+            [result.insertId, domain_name, rec.type, rec.name, rec.ttl, rec.value]
+          );
+        }
+      } catch (e) {}
 
       // Log activity
       await pool.query(

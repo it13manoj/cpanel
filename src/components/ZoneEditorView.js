@@ -64,7 +64,7 @@ export default function ZoneEditorView({ domains, initialDomain }) {
     setRecordType(type);
     setRecordName(selectedDomain);
     setRecordTtl(14400);
-    setRecordValue(type === 'A' ? (dnsData?.serverIp || '127.0.0.1') : '');
+    setRecordValue(type === 'A' ? (dnsData?.serverIp || '173.212.235.87') : '');
     setRecordPriority(10);
     setModalOpen(true);
   };
